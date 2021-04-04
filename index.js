@@ -198,10 +198,10 @@ async function initMap() {
     }
   }
 
-  var states = await fetch("/data/states.json")
+  var states = await fetch("./data/states.json")
     .then(r => r.json())
 
-  var heatmaps = await fetch("/data/heatmaps.json")
+  var heatmaps = await fetch("./data/heatmaps.json")
     .then(r => r.json())
 
 
