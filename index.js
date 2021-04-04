@@ -231,16 +231,16 @@ async function initMap() {
       // console.log(`http://www.gitzmansgallery.com/tiles/${zoom}_${normalizedCoord.x}_${(normalizedCoord.y-1)}.jpg`);
       return (
         // `${params.tileURL}/tiles/${zoom}_${normalizedCoord.x}_${(normalizedCoord.y)}.jpg`
-        `http://${params.tileURL}/tiles/${zoom}_${normalizedCoord.x}_${(normalizedCoord.y)}.jpg`
+        // `http://${params.tileURL}/tiles/${zoom}_${normalizedCoord.x}_${(normalizedCoord.y)}.jpg`
 
-        // `/images/wfrp/${zoom}/tile_${normalizedCoord.x}_${(normalizedCoord.y-1)}.jpg`
+        `/map/${zoom}/${zoom}_${normalizedCoord.x}_${(normalizedCoord.y)}.jpg`
 
       );
     },
     tileSize: new google.maps.Size(256, 256),
     maxZoom: 7,
     minZoom: 3,
-    radius: 100,
+    radius: 10000,
     name: "WFRP",
   });
   map.mapTypes.set("WFRP", wfrpMapType);
@@ -260,10 +260,7 @@ async function initMap() {
   var mapFunctions = {
     view: {
       saveView: function() {
-        // console.log(name())
-        if (!map || !map.getCenter()) {
-          return
-        }
+        console.log(name())
         localStorage.setItem('center', JSON.stringify(map.getCenter().toJSON()))
         // console.log(JSON.stringify(map.getCenter().toJSON()))
         localStorage.setItem('zoom', map.getZoom())
@@ -273,6 +270,7 @@ async function initMap() {
         // console.log(name())
         var center = localStorage.getItem('center');
         var zoom = localStorage.getItem('zoom');
+        console.log(center,zoom);
         map.setCenter(JSON.parse(center));
         map.setZoom(Number(zoom));
       },
@@ -299,7 +297,7 @@ async function initMap() {
       },
       loadMarkers: function() {
         console.log(name());
-        var data = JSON.parse(localStorage.getItem('geoPoints')||[]);
+        var data = JSON.parse(localStorage.getItem('geoPoints') || []);
         // map.data.addGeoJson(data);
         if (data) data.map(marker => this.placeMarker({
           ...marker,
@@ -520,9 +518,7 @@ async function initMap() {
 
   bindViewListeners(map);
 
-  //load saved data
-  mapFunctions.markers.loadMarkers(map);
-  mapFunctions.view.loadView(map);
+
 
 
 
@@ -608,12 +604,13 @@ async function initMap() {
         return localStorage.setItem('geoLines', JSON.stringify(data))
       },
       load: function() {
-        return JSON.parse(localStorage.getItem('geoLines')||[]);
+        return JSON.parse(localStorage.getItem('geoLines') || []);
       }
     },
 
     saveItems: function() {
       console.log("saving lines");
+      if (!allowEdits) return
       var tt = this.items.map(l => l.getPath()
         .getArray()
         // .map(p => )
@@ -856,10 +853,26 @@ async function initMap() {
   */
 
 
-  makeControl("Export memory", () => exportData({
-    geoPoints: JSON.parse(localStorage.getItem('geoPoints')),
-    geoLines: JSON.parse(localStorage.getItem('geoLines')),
-  }), centerControlDiv, map);
+  var setDefaults = async () => {
+    console.log("logging defaultl story ");
+    var states = await fetch("./story.json")
+      .then(r => r.json())
+
+    return await importData(states)
+  }
+
+
+
+  makeControl("Export memory", () => {
+    var x = {};
+    [
+      "center",
+      "zoom",
+      "geoPoints",
+      "geoLines",
+    ].forEach(v => x[v] = JSON.parse(localStorage.getItem(v)));
+    exportData(x);
+  }, centerControlDiv, map);
 
   makeControl("Import memory", async () => runImport(), centerControlDiv, map);
 
@@ -878,9 +891,19 @@ async function initMap() {
     setEditable: allowEdits,
     // show
   }
-  allowEdits && tools.draw()
-  tools.loadItems()
+  allowEdits && tools.draw() ;
+  if (params.story == "true") {
+    await setDefaults()
+  }
 
+  // setDefaults
+
+
+
+  tools.loadItems()
+  //load saved data
+  mapFunctions.markers.loadMarkers(map);
+  mapFunctions.view.loadView(map);
 
 
 
