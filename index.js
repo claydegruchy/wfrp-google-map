@@ -2,6 +2,10 @@ var params = Object.fromEntries(
   new URLSearchParams(window.location.search)
 );
 
+// var body = document.querySelector("body")
+// console.log(body);
+// body.setAttribute('filter', 'url(#blur-and-invert)')
+
 
 // console.log("loaded", "customCreateElement")
 document.__proto__.customCreateElement = (tag = 'div', attributes = {}, parent) => {
@@ -98,7 +102,7 @@ async function initMap() {
       this.set("path", path);
       this.set("vertex", vertex);
       this.setMap(map);
-      this.draw();
+      this.removeVertex();
     }
     /**
      * Deletes the vertex from the path.
@@ -290,10 +294,10 @@ async function initMap() {
         if (false) {
           var data = JSON.parse(fileString);
         } else {
-          var data = JSON.parse(localStorage.getItem('geoData'));
+          var data = JSON.parse(localStorage.getItem('geoPoints'));
 
         }
-        console.log(data, JSON.parse(localStorage.getItem('geoData')));
+        console.log(data, JSON.parse(localStorage.getItem('geoPoints')));
         // map.data.addGeoJson(data);
         if (data) data.map(marker => this.placeMarker({
           ...marker,
@@ -303,7 +307,7 @@ async function initMap() {
 
       saveMarkersToMemory: function() {
         console.log(name());
-        localStorage.setItem('geoData', JSON.stringify(this.markers.map(m => m.export())))
+        localStorage.setItem('geoPoints', JSON.stringify(this.markers.map(m => m.export())))
       },
 
       placeMarker: function(info) {
@@ -395,11 +399,7 @@ async function initMap() {
 
 
 
-  google.maps.event.addListener(map, 'click', function(event) {
-    mapFunctions.markers.placeMarker({
-      position: event.latLng
-    });
-  });
+
 
 
 
@@ -493,10 +493,6 @@ async function initMap() {
   // add buttons
   const centerControlDiv = document.createElement("div");
 
-  makeControl("Export memory", () => exportData(JSON.parse(localStorage.getItem('geoData'))), centerControlDiv, map);
-  makeControl("Load view", () => loadView(map), centerControlDiv, map);
-  makeControl("Clear markers", () => mapFunctions.markers.clearMarkers(), centerControlDiv, map);
-
   map.controls[google.maps.ControlPosition.LEFT].push(centerControlDiv);
   console.log("ControlPosition", google.maps.ControlPosition)
 
@@ -544,7 +540,6 @@ async function initMap() {
     }
 
   }
-  heatmaps.activate()
   console.log("loading heatmap", "done");
 
   console.log(JSON.stringify(heatmaps.heatmaps));
@@ -578,7 +573,6 @@ async function initMap() {
 
   }
 
-  states.activate()
 
   console.log("loading states", "done");
 
@@ -587,16 +581,100 @@ async function initMap() {
 
   var generaticTools = {
     items: [],
+    memory: {
+      save: function(data) {
+        return localStorage.setItem('geoLines', JSON.stringify(data))
+      },
+      load: function() {
+        return JSON.parse(localStorage.getItem('geoLines'));
+      }
+    },
+
+    saveItems: function() {
+      var tt = this.items.map(l => l.getPath()
+        .getArray()
+        // .map(p => )
+      )
+      // console.log(JSON.stringify(tt));
+      this.memory.save(tt)
+    },
+    loadItems: function() {
+      var mem = this.memory.load()
+      console.log("loading items from mem", mem);
+      mem.map(linePath => {
+        const line = new google.maps.Polyline({
+          path: linePath,
+        });
+        line.setMap(map)
+        this.updateLine(line)
+
+        // line .dispatchEvent(e);
+
+      })
+    },
+    clearItems: function() {
+      this.memory.save([])
+      this.items.map(l => l.setMap(null))
+      this.items = []
+    },
+    updateLine: function(line) {
+
+      line.setDraggable(true)
+      line.setEditable(true)
+      line.setOptions({
+        strokeColor: 'red',
+        strokeOpacity: 0,
+
+        icons: [{
+          icon: {
+            path: "M 0,-1 0,1",
+            strokeOpacity: 1,
+            scale: 4,
+          },
+          offset: "0",
+          repeat: "20px",
+        }, ]
+      });
+      this.addDeleteContext(line)
+      this.items.push(line)
+      this.saveItems()
+
+      var updateEventAction = () => {
+        console.log('Bounds changed.');
+        this.saveItems()
+      }
+
+
+      line.addListener('dragend', updateEventAction)
+      line.addListener('dragstart', updateEventAction)
+      line.addListener('mouseout', updateEventAction)
+      line.addListener('mouseup', updateEventAction)
+
+
+
+
+    },
+
+    addDeleteContext: ob => google.maps.event.addListener(ob, "contextmenu", (e) => {
+      const deleteMenu = new DeleteMenu();
+
+      // Check if click was on a vertex control point
+      if (e.vertex == undefined) {
+        return;
+      }
+      deleteMenu.open(map, ob.getPath(), e.vertex);
+    }),
+
     draw: function() {
 
       const drawingManager = new google.maps.drawing.DrawingManager({
-        drawingMode: google.maps.drawing.OverlayType.MARKER,
+        drawingMode: null,
         drawingControl: true,
         drawingControlOptions: {
           position: google.maps.ControlPosition.TOP_CENTER,
           drawingModes: [
             google.maps.drawing.OverlayType.MARKER,
-            google.maps.drawing.OverlayType.CIRCLE,
+            // google.maps.drawing.OverlayType.CIRCLE,
             google.maps.drawing.OverlayType.POLYGON,
             google.maps.drawing.OverlayType.POLYLINE,
             google.maps.drawing.OverlayType.RECTANGLE,
@@ -614,28 +692,24 @@ async function initMap() {
           zIndex: 1,
         },
       });
+
+
       drawingManager.setMap(map);
 
-      const deleteMenu = new DeleteMenu();
 
-      var d = ob => google.maps.event.addListener(ob, "contextmenu", (e) => {
-        // Check if click was on a vertex control point
-        if (e.vertex == undefined) {
-          return;
-        }
-        deleteMenu.open(map, ob.getPath(), e.vertex);
+
+      google.maps.event.addListener(drawingManager, 'markercomplete', (marker) => {
+        console.log(marker);
+        mapFunctions.markers.placeMarker({
+          position: marker.position
+        });
+        marker.setMap(null)
       });
 
 
-      google.maps.event.addListener(drawingManager, 'polylinecomplete', function(line) {
-        line.setDraggable(true)
-        line.setEditable(true)
-        d(line)
-        google.maps.event.addListener(line, 'bounds_changed', function() {
-          console.log('Bounds changed.');
-        });
-
-
+      google.maps.event.addListener(drawingManager, 'polylinecomplete', (line) => {
+        console.log("line compelte", line);
+        this.updateLine(line)
         const coords = line.getPath().getArray().map(coord => {
           return {
             lat: coord.lat(),
@@ -644,18 +718,18 @@ async function initMap() {
         });
       });
 
-      google.maps.event.addListener(drawingManager, 'polygoncomplete', function(polygon) {
+      google.maps.event.addListener(drawingManager, 'polygoncomplete', (polygon) => {
         const coords = polygon.getPath().getArray().map(coord => {
           return {
             lat: coord.lat(),
             lng: coord.lng()
           }
         });
-        d(line)
+        this.addDeleteContext(polygon)
         exportData(coords, 'stateShape')
       });
 
-      google.maps.event.addListener(drawingManager, 'rectanglecomplete', function(rectangle) {
+      google.maps.event.addListener(drawingManager, 'rectanglecomplete', (rectangle) => {
         // rectangle.draggable
         // editable: true
         rectangle.setDraggable(true)
@@ -665,7 +739,7 @@ async function initMap() {
         overlay.setMap(map);
 
 
-        google.maps.event.addListener(rectangle, 'bounds_changed', function() {
+        google.maps.event.addListener(rectangle, 'bounds_changed', () => {
           console.log('Bounds changed.');
           overlay.updateBounds(rectangle.getBounds(rectangle))
         });
@@ -677,7 +751,7 @@ async function initMap() {
   }
 
 
-  generaticTools.draw()
+
 
   console.log("loading overlay");
   var overlay = {
@@ -726,27 +800,22 @@ async function initMap() {
     console.log("loading template", "done");
 
   */
-  // class CoordMapType {
-  //   constructor(tileSize) {
-  //     this.tileSize = tileSize;
-  //   }
-  //   getTile(coord, zoom, ownerDocument) {
-  //     const div = ownerDocument.createElement("div");
-  //     div.innerHTML = String(coord);
-  //     div.style.width = this.tileSize.width + "px";
-  //     div.style.height = this.tileSize.height + "px";
-  //     div.style.fontSize = "10";
-  //     div.style.borderStyle = "solid";
-  //     div.style.borderWidth = "1px";
-  //     div.style.borderColor = "#FFFFFF";
-  //     return div;
-  //   }
-  //   releaseTile(tile) {}
-  // }
-  //
-  // map.overlayMapTypes.insertAt(
-  //   0,
-  //   new CoordMapType(new google.maps.Size(256, 256))
-  // );
+
+
+  makeControl("Export memory", () => exportData(JSON.parse(localStorage.getItem('geoPoints'))), centerControlDiv, map);
+  makeControl("Load view", () => loadView(map), centerControlDiv, map);
+  makeControl("Clear markers", () => mapFunctions.markers.clearMarkers(), centerControlDiv, map);
+  makeControl("Clear lines", () => generaticTools.clearItems(), centerControlDiv, map);
+  heatmaps.activate()
+  states.activate()
+  generaticTools.draw()
+  generaticTools.loadItems()
+
+
+
+
+  var overlay = document.querySelector('#overlay')
+  console.log(overlay);
+  overlay.style.webkitFilter = `sepia(50%) `
 
 }
