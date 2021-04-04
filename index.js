@@ -299,7 +299,7 @@ async function initMap() {
       },
       loadMarkers: function() {
         console.log(name());
-        var data = JSON.parse(localStorage.getItem('geoPoints'));
+        var data = JSON.parse(localStorage.getItem('geoPoints')||[]);
         // map.data.addGeoJson(data);
         if (data) data.map(marker => this.placeMarker({
           ...marker,
@@ -608,7 +608,7 @@ async function initMap() {
         return localStorage.setItem('geoLines', JSON.stringify(data))
       },
       load: function() {
-        return JSON.parse(localStorage.getItem('geoLines'));
+        return JSON.parse(localStorage.getItem('geoLines')||[]);
       }
     },
 
