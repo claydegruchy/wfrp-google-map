@@ -261,6 +261,9 @@ async function initMap() {
     view: {
       saveView: function() {
         // console.log(name())
+        if (!map || !map.getCenter()) {
+          return
+        }
         localStorage.setItem('center', JSON.stringify(map.getCenter().toJSON()))
         // console.log(JSON.stringify(map.getCenter().toJSON()))
         localStorage.setItem('zoom', map.getZoom())
@@ -800,6 +803,37 @@ async function initMap() {
     }
   }
   console.log("loading overlay", "done");
+
+
+
+  function runImport() {
+    const {
+      value: file
+    } = await Swal.fire({
+      title: 'Select image',
+      input: 'file',
+      inputAttributes: {
+        'accept': 'application/json',
+        'aria-label': 'Upload your profile picture'
+      }
+    })
+
+    if (file) {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        importData(JSON.parse(e.target.result))
+        Swal.fire({
+            title: 'Data imported!',
+            text: 'The page will now reload to import data'
+          })
+          .then(() => window.location.reload(false))
+      }
+      reader.readAsText(file)
+      //
+
+    }
+  }
+
   // overlay.activate()
 
 
@@ -827,39 +861,16 @@ async function initMap() {
     geoLines: JSON.parse(localStorage.getItem('geoLines')),
   }), centerControlDiv, map);
 
-  makeControl("Import memory", async () => {
-      const {
-        value: file
-      } = await Swal.fire({
-        title: 'Select image',
-        input: 'file',
-        inputAttributes: {
-          'accept': 'application/json',
-          'aria-label': 'Upload your profile picture'
-        }
-      })
+  makeControl("Import memory", async () => runImport(), centerControlDiv, map);
 
-      if (file) {
-        const reader = new FileReader()
-        reader.onload = (e) => {
-          importData(JSON.parse(e.target.result))
-          Swal.fire({
-            title: 'Data imported!',
-            text: 'The page will now reload to import data'
-          })
-          .then(()=>window.location.reload(false))
-        }
-        reader.readAsText(file)
-        //
+  if (allowEdits) {
+    makeControl("Clear markers", () => mapFunctions.markers.clearMarkers(), centerControlDiv, map);
+    makeControl("Clear lines", () => generaticTools.clearItems(), centerControlDiv, map);
+    heatmaps.activate()
+    states.activate()
 
-      }
-    }
-    , centerControlDiv, map);
+  }
 
-  makeControl("Clear markers", () => mapFunctions.markers.clearMarkers(), centerControlDiv, map);
-  makeControl("Clear lines", () => generaticTools.clearItems(), centerControlDiv, map);
-  heatmaps.activate()
-  states.activate()
 
   var tools = generaticTools
   tools.config = {
