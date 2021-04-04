@@ -854,8 +854,6 @@ async function initMap() {
 
       }
     }
-
-
     , centerControlDiv, map);
 
   makeControl("Clear markers", () => mapFunctions.markers.clearMarkers(), centerControlDiv, map);
