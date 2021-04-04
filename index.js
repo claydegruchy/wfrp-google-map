@@ -233,7 +233,7 @@ async function initMap() {
         // `${params.tileURL}/tiles/${zoom}_${normalizedCoord.x}_${(normalizedCoord.y)}.jpg`
         // `http://${params.tileURL}/tiles/${zoom}_${normalizedCoord.x}_${(normalizedCoord.y)}.jpg`
 
-        `/map/${zoom}/${zoom}_${normalizedCoord.x}_${(normalizedCoord.y)}.jpg`
+        `./map/${zoom}/${zoom}_${normalizedCoord.x}_${(normalizedCoord.y)}.jpg`
 
       );
     },
