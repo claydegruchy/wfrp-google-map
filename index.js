@@ -18,11 +18,17 @@ document.__proto__.customCreateElement = (tag = 'div', attributes = {}, parent) 
   if (parent) parent.appendChild(myNewElement)
   return myNewElement;
 }
-params
+// params
+
+
+
+
+
+
 
 // add the google key
 document.customCreateElement('script', {
-  src: `https://maps.googleapis.com/maps/api/js?key=${params.key}&callback=initMap&libraries=visualization&v=weekly`,
+  src: `https://maps.googleapis.com/maps/api/js?key=${params.key}&callback=initMap&libraries=visualization,drawing&v=weekly`,
   defer: true
 }, document.querySelector('head'))
 
@@ -31,6 +37,165 @@ document.customCreateElement('script', {
 
 
 async function initMap() {
+
+  class DeleteMenu extends google.maps.OverlayView {
+    constructor() {
+      super();
+      this.div_ = document.createElement("div");
+      this.div_.className = "delete-menu";
+      this.div_.innerHTML = "Delete";
+      const menu = this;
+      google.maps.event.addDomListener(this.div_, "click", () => {
+        menu.removeVertex();
+      });
+    }
+    onAdd() {
+      const deleteMenu = this;
+      const map = this.getMap();
+      this.getPanes().floatPane.appendChild(this.div_);
+      // mousedown anywhere on the map except on the menu div will close the
+      // menu.
+      this.divListener_ = google.maps.event.addDomListener(
+        map.getDiv(),
+        "mousedown",
+        (e) => {
+          if (e.target != deleteMenu.div_) {
+            deleteMenu.close();
+          }
+        },
+        true
+      );
+    }
+    onRemove() {
+      if (this.divListener_) {
+        google.maps.event.removeListener(this.divListener_);
+      }
+      this.div_.parentNode.removeChild(this.div_);
+      // clean up
+      this.set("position", null);
+      this.set("path", null);
+      this.set("vertex", null);
+    }
+    close() {
+      this.setMap(null);
+    }
+    draw() {
+      const position = this.get("position");
+      const projection = this.getProjection();
+
+      if (!position || !projection) {
+        return;
+      }
+      const point = projection.fromLatLngToDivPixel(position);
+      this.div_.style.top = point.y + "px";
+      this.div_.style.left = point.x + "px";
+    }
+    /**
+     * Opens the menu at a vertex of a given path.
+     */
+    open(map, path, vertex) {
+      this.set("position", path.getAt(vertex));
+      this.set("path", path);
+      this.set("vertex", vertex);
+      this.setMap(map);
+      this.draw();
+    }
+    /**
+     * Deletes the vertex from the path.
+     */
+    removeVertex() {
+      const path = this.get("path");
+      const vertex = this.get("vertex");
+
+      if (!path || vertex == undefined) {
+        this.close();
+        return;
+      }
+      path.removeAt(vertex);
+      this.close();
+    }
+  }
+
+  class USGSOverlay extends google.maps.OverlayView {
+    constructor(bounds, image) {
+      super();
+      // Initialize all properties.
+      this.bounds_ = bounds;
+      this.image_ = image;
+      // Define a property to hold the image's div. We'll
+      // actually create this div upon receipt of the onAdd()
+      // method so we'll leave it null for now.
+      this.div_ = null;
+    }
+    updateBounds(bounds) {
+      this.bounds_ = bounds
+      this.draw()
+    }
+    /**
+     * onAdd is called when the map's panes are ready and the overlay has been
+     * added to the map.
+     */
+    onAdd() {
+      this.div_ = document.createElement("div");
+      this.div_.style.borderStyle = "none";
+      this.div_.style.borderWidth = "0px";
+      this.div_.style.position = "absolute";
+      // Create the img element and attach it to the div.
+      const img = document.createElement("img");
+      img.src = this.image_;
+      img.style.width = "100%";
+      img.style.height = "100%";
+      img.style.position = "absolute";
+      img.style.opacity = 0.5;
+
+
+      this.div_.appendChild(img);
+      // Add the element to the "overlayLayer" pane.
+      const panes = this.getPanes();
+      panes.overlayLayer.appendChild(this.div_);
+    }
+    draw() {
+      // We use the south-west and north-east
+      // coordinates of the overlay to peg it to the correct position and size.
+      // To do this, we need to retrieve the projection from the overlay.
+      const overlayProjection = this.getProjection();
+      // Retrieve the south-west and north-east coordinates of this overlay
+      // in LatLngs and convert them to pixel coordinates.
+      // We'll use these coordinates to resize the div.
+      const sw = overlayProjection.fromLatLngToDivPixel(
+        this.bounds_.getSouthWest()
+      );
+      const ne = overlayProjection.fromLatLngToDivPixel(
+        this.bounds_.getNorthEast()
+      );
+
+      // Resize the image's div to fit the indicated dimensions.
+      if (this.div_) {
+        this.div_.style.left = sw.x + "px";
+        this.div_.style.top = ne.y + "px";
+        this.div_.style.width = ne.x - sw.x + "px";
+        this.div_.style.height = sw.y - ne.y + "px";
+      }
+    }
+    /**
+     * The onRemove() method will be called automatically from the API if
+     * we ever set the overlay's map property to 'null'.
+     */
+    onRemove() {
+      if (this.div_) {
+        this.div_.parentNode.removeChild(this.div_);
+        this.div_ = null;
+      }
+    }
+  }
+
+  var states = await fetch("/states.json")
+    .then(r => r.json())
+
+  var heatmaps = await fetch("/heatmaps.json")
+    .then(r => r.json())
+
+
   const map = new google.maps.Map(document.getElementById("map"), {
     center: {
       lat: 0,
@@ -106,6 +271,7 @@ async function initMap() {
       deselectAll: function() {
         console.log(name());
         return this.markers
+          .filter(m => m.deselect)
           .map(m => m.deselect())
       },
       clearMarkers: function() {
@@ -114,7 +280,10 @@ async function initMap() {
         this.markers = []
         this.saveMarkersToMemory()
       },
-
+      deleteMarker: function(marker) {
+        this.markers = this.markers.filter(m => m != marker)
+        marker.setMap(null)
+      },
       loadMarkers: function() {
         console.log(name());
 
@@ -157,48 +326,59 @@ async function initMap() {
         });
 
 
+        if (!marker.data.noInput) {
 
-        //#########  make the inside fo the popup box
-        var inputContainer = document.customCreateElement('form', {})
-        var textField = document.customCreateElement('input', {
-          type: "text",
-          size: "31",
-          maxlength: "31",
-          tabindex: "-1",
-          value: marker.data.inputContent || ""
+          //#########  make the inside fo the popup box
+          var inputContainer = document.customCreateElement('form', {})
+          var textField = document.customCreateElement('input', {
+            type: "text",
+            size: "31",
+            maxlength: "31",
+            tabindex: "-1",
+            value: marker.data.inputContent || ""
 
-        }, inputContainer)
-        var saveButton = document.customCreateElement('button', {
-          innerText: "Submit",
-          onclick: (e) => {
-            console.log("Saved marker", marker);
-            marker.data.inputContent = textField.value
-            marker.save()
-            e.preventDefault()
+          }, inputContainer)
+          var saveButton = document.customCreateElement('button', {
+            innerText: "Submit",
+            onclick: (e) => {
+              console.log("Saved marker", marker);
+              marker.data.inputContent = textField.value
+              marker.save()
+              e.preventDefault()
+            }
+          }, inputContainer)
+
+          var saveButton = document.customCreateElement('button', {
+            innerText: "Delete",
+            onclick: (e) => {
+              console.log("Delete marker", marker);
+              this.deleteMarker(marker)
+              e.preventDefault()
+            }
+          }, inputContainer)
+
+          // #########
+          marker.infowindow = new google.maps.InfoWindow({
+            content: inputContainer
+          });
+
+          marker.deselect = () => {
+            marker.infowindow.close(map, marker)
           }
-        }, inputContainer)
+          marker.select = () => {
+            this.deselectAll()
+            marker.infowindow.open(map, marker)
+          }
 
-        // #########
-        marker.infowindow = new google.maps.InfoWindow({
-          content: inputContainer
-        });
 
-        marker.deselect = () => {
-          marker.infowindow.close(map, marker)
+          if (!info.imported) marker.select()
+          // if (!info.imported) marker.infowindow.open(map, marker)
+
+          google.maps.event.addListener(marker, 'click', function() {
+            marker.select()
+          });
+
         }
-        marker.select = () => {
-          this.deselectAll()
-          marker.infowindow.open(map, marker)
-        }
-
-
-        if (!info.imported) marker.select()
-        // if (!info.imported) marker.infowindow.open(map, marker)
-
-        google.maps.event.addListener(marker, 'click', function() {
-          marker.select()
-        });
-
 
 
         this.markers.push(marker)
@@ -267,8 +447,8 @@ async function initMap() {
 
 
 
-  function exportData() {
-    var data = JSON.parse(localStorage.getItem('geoData'));
+  function exportData(data, name = 'data') {
+
 
     function downloadObjectAsJson(exportObj, exportName) {
       var dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportObj, null, 2));
@@ -280,7 +460,7 @@ async function initMap() {
       downloadAnchorNode.remove();
     }
 
-    downloadObjectAsJson(data, "WFRP-map-data")
+    downloadObjectAsJson(data, "WFRP-map-" + name)
   }
 
 
@@ -313,7 +493,7 @@ async function initMap() {
   // add buttons
   const centerControlDiv = document.createElement("div");
 
-  makeControl("Export memory", () => exportData(), centerControlDiv, map);
+  makeControl("Export memory", () => exportData(JSON.parse(localStorage.getItem('geoData'))), centerControlDiv, map);
   makeControl("Load view", () => loadView(map), centerControlDiv, map);
   makeControl("Clear markers", () => mapFunctions.markers.clearMarkers(), centerControlDiv, map);
 
@@ -332,164 +512,220 @@ async function initMap() {
 
 
 
+
   console.log("loading heatmap");
-
-
-
   var heatmaps = {
-    vampires: {
-      data: [
-        {
-          "lat": 27.694654507853507,
-          "lng": 19.803145114872276,
-          weight: 10
-        },
-        {
-          "lat": 27.55838182658418,
-          "lng": 18.682539646122276,
-          weight: 10
-        },
-        {
-          "lat": 25.434779443123798,
-          "lng": 18.484785739872276,
-          weight: 10
-        },
-        {
-          "lat": 26.756830886346698,
-          "lng": 14.441816989872276,
-          weight: 10
-        },
-        {
-          "lat": 25.77163585252392,
-          "lng": 13.914473239872276,
-          weight: 10
-        },
-        {
-          "lat": 24.25842095327564,
-          "lng": 15.496504489872276,
-          weight: 10
-        },
-        {
-          "lat": 24.758242234527263,
-          "lng": 18.287031833622276
-        },
-        {
-          "lat": 30.364758698886515,
-          "lng": 14.529707614872276
-        },
-        {
-          "lat": 28.79793001696144,
-          "lng": 10.706465427372276
-        },
-        {
-          "lat": 28.41211726304387,
-          "lng": 10.640547458622276
-        },
-        {
-          "lat": 27.38292532851722,
-          "lng": 19.100020114872276
-        },
-        {
-          "lat": 26.894087377867795,
-          "lng": 18.155195896122276
-        },
-        {
-          "lat": 25.15665868531593,
-          "lng": 11.827070896122276
-        },
-        {
-          "lat": 24.478587145032265,
-          "lng": 10.552656833622276
-        },
-        {
-          "lat": 32.2791795482641,
-          "lng": -16.144120510127724
-        },
-        {
-          "lat": 36.27212327929268,
-          "lng": -0.6314251976277241
-        },
-        {
-          "lat": 39.03139120015154,
-          "lng": -29.387813504477215
-        },
-        {
-          "lat": 43.77450743413511,
-          "lng": -10.095821316977215
-        },
-        {
-          "lat": 22.28148396837893,
-          "lng": 11.17707282157669
-        },
-        {
-          "lat": 16.50194491022607,
-          "lng": 13.46222907157669
-        },
-        {
-          "lat": 16.56513738519289,
-          "lng": 10.34211188407669
-        },
-        {
-          "lat": 21.506752783098822,
-          "lng": 5.81574469657669,
-        },
+    heatmaps: heatmaps,
+    activeMaps: [],
+    activate: function() {
+      Object.keys(this.heatmaps).map(heatmapName => {
+        console.log("making heatmap for", heatmapName);
+        var heatmap = new google.maps.visualization.HeatmapLayer({
+          data: this.heatmaps[heatmapName].data.map((l, i) =>
+            ({
+              location: new google.maps.LatLng({
+                ...l,
+              }),
+              weight: l.weight || 1
+            })
 
-      ],
-      gradient:  [
 
-        "rgba(255,0,0,0)" ,
-        "rgba(255,0,0,1)" ,
-        "rgba(121,9,71,1)" ,
-        "rgba(255,169,169,1)",
-        // "rgba(0, 255, 255, 0)",
-        //     "rgba(0, 255, 255, 1)",
-        //     "rgba(0, 191, 255, 1)",
-        //     "rgba(0, 127, 255, 1)",
-        //     "rgba(0, 63, 255, 1)",
-        //     "rgba(0, 0, 255, 1)",
-        //     "rgba(0, 0, 223, 1)",
-        //     "rgba(0, 0, 191, 1)",
-        //     "rgba(0, 0, 159, 1)",
-        //     "rgba(0, 0, 127, 1)",
-        //     "rgba(63, 0, 91, 1)",
-        //     "rgba(127, 0, 63, 1)",
-        //     "rgba(191, 0, 31, 1)",
-        //     "rgba(255, 0, 0, 1)",
-    ]
+          ),
+          radius: 35,
+          // dissipating:false
+          gradient: this.heatmaps[heatmapName].gradient
+        });
+        // if (heatmaps[heatmapName].gradient.length>1) heatmap.set("gradient", heatmaps[heatmapName].gradient);
+        // heatmap.set("gradient", heatmaps[heatmapName].gradient);
+
+        heatmap.setMap(map);
+        this.activeMaps.push(heatmap)
+      })
+    }
+
+  }
+  heatmaps.activate()
+  console.log("loading heatmap", "done");
+
+  console.log(JSON.stringify(heatmaps.heatmaps));
+
+
+
+
+
+  console.log("loading states");
+
+  var states = {
+    states: states,
+    active: [],
+    activate: function(specificState) {
+      console.log("acctivating states", this.states);
+      Object.entries(this.states).map(stateItem => {
+        console.log("making state for", stateItem[0]);
+        const state = new google.maps.Polygon({
+          paths: stateItem[1].coords,
+          strokeColor: stateItem[1].colour,
+          strokeOpacity: 0.8,
+          strokeWeight: 2,
+          fillColor: stateItem[1].colour,
+          fillOpacity: 0.35,
+        });
+
+        state.setMap(map);
+        this.active.push(state)
+      })
     },
 
   }
 
-  Object.keys(heatmaps).map(heatmapName => {
-    console.log("making heatmap for", heatmapName);
-    var heatmap = new google.maps.visualization.HeatmapLayer({
-      data: heatmaps[heatmapName].data.map((l, i) =>
-        ({
-          location: new google.maps.LatLng({
-            ...l,
-          }),
-          weight: l.weight || 1
+  states.activate()
+
+  console.log("loading states", "done");
+
+
+
+
+  var generaticTools = {
+    items: [],
+    draw: function() {
+
+      const drawingManager = new google.maps.drawing.DrawingManager({
+        drawingMode: google.maps.drawing.OverlayType.MARKER,
+        drawingControl: true,
+        drawingControlOptions: {
+          position: google.maps.ControlPosition.TOP_CENTER,
+          drawingModes: [
+            google.maps.drawing.OverlayType.MARKER,
+            google.maps.drawing.OverlayType.CIRCLE,
+            google.maps.drawing.OverlayType.POLYGON,
+            google.maps.drawing.OverlayType.POLYLINE,
+            google.maps.drawing.OverlayType.RECTANGLE,
+          ],
+        },
+        markerOptions: {
+          icon: "https://developers.google.com/maps/documentation/javascript/examples/full/images/beachflag.png",
+        },
+        circleOptions: {
+          fillColor: "#ffff00",
+          fillOpacity: 1,
+          strokeWeight: 5,
+          clickable: false,
+          editable: true,
+          zIndex: 1,
+        },
+      });
+      drawingManager.setMap(map);
+
+      const deleteMenu = new DeleteMenu();
+
+      var d = ob => google.maps.event.addListener(ob, "contextmenu", (e) => {
+        // Check if click was on a vertex control point
+        if (e.vertex == undefined) {
+          return;
+        }
+        deleteMenu.open(map, ob.getPath(), e.vertex);
+      });
+
+
+      google.maps.event.addListener(drawingManager, 'polylinecomplete', function(line) {
+        line.setDraggable(true)
+        line.setEditable(true)
+        d(line)
+        google.maps.event.addListener(line, 'bounds_changed', function() {
+          console.log('Bounds changed.');
+        });
+
+
+        const coords = line.getPath().getArray().map(coord => {
+          return {
+            lat: coord.lat(),
+            lng: coord.lng()
+          }
+        });
+      });
+
+      google.maps.event.addListener(drawingManager, 'polygoncomplete', function(polygon) {
+        const coords = polygon.getPath().getArray().map(coord => {
+          return {
+            lat: coord.lat(),
+            lng: coord.lng()
+          }
+        });
+        d(line)
+        exportData(coords, 'stateShape')
+      });
+
+      google.maps.event.addListener(drawingManager, 'rectanglecomplete', function(rectangle) {
+        // rectangle.draggable
+        // editable: true
+        rectangle.setDraggable(true)
+        rectangle.setEditable(true)
+        console.log(rectangle.getBounds());
+        overlay = new USGSOverlay(rectangle.getBounds(), "/statemap.jpg", map);
+        overlay.setMap(map);
+
+
+        google.maps.event.addListener(rectangle, 'bounds_changed', function() {
+          console.log('Bounds changed.');
+          overlay.updateBounds(rectangle.getBounds(rectangle))
+        });
+
+
+      });
+
+    }
+  }
+
+
+  generaticTools.draw()
+
+  console.log("loading overlay");
+  var overlay = {
+    items: {},
+    active: [],
+    activate: async function() {
+      console.log("acctivating", this.items);
+
+
+
+
+      const imageBounds = {
+        north: 6.35895743768598,
+        south: -6.05198343189395,
+        east: -2.5711641173381707,
+        west: 6.35895743768598,
+      };
+      historicalOverlay = new google.maps.GroundOverlay(
+        "/statemap.jpg",
+        imageBounds
+      );
+      historicalOverlay.setMap(map);
+      // Object.entries(this.items).map(item => {
+
+      // })
+    }
+  }
+  console.log("loading overlay", "done");
+  // overlay.activate()
+
+
+  /*
+  // TEMPLATE
+    console.log("loading template");
+    var template = {
+      items: {},
+      active: [],
+      activate: function() {
+        console.log("acctivating", this.items);
+
+        Object.entries(this.items).map(item => {
+
         })
+      }
+    }
+    console.log("loading template", "done");
 
-
-      ),
-      radius: 35,
-      // dissipating:false
-      gradient: heatmaps[heatmapName].gradient
-    });
-    // if (heatmaps[heatmapName].gradient.length>1) heatmap.set("gradient", heatmaps[heatmapName].gradient);
-// heatmap.set("gradient", heatmaps[heatmapName].gradient);
-
-    heatmap.setMap(map);
-  })
-
-
-
-
-  console.log("loading heatmap", "done");
-
-
-
+  */
   // class CoordMapType {
   //   constructor(tileSize) {
   //     this.tileSize = tileSize;
