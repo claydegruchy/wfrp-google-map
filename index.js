@@ -42,6 +42,11 @@ document.customCreateElement('script', {
 
 async function initMap() {
 
+  var allowEdits = false
+  if (params.e == "drcjkhvltklkjlgcindtlluvnbjeurvg") {
+    allowEdits = true
+  }
+
   class DeleteMenu extends google.maps.OverlayView {
     constructor() {
       super();
@@ -225,7 +230,8 @@ async function initMap() {
       const bound = Math.pow(2, zoom);
       // console.log(`http://www.gitzmansgallery.com/tiles/${zoom}_${normalizedCoord.x}_${(normalizedCoord.y-1)}.jpg`);
       return (
-        `http://www.gitzmansgallery.com/tiles/${zoom}_${normalizedCoord.x}_${(normalizedCoord.y)}.jpg`
+        // `${params.tileURL}/tiles/${zoom}_${normalizedCoord.x}_${(normalizedCoord.y)}.jpg`
+        `http://${params.tileURL}/tiles/${zoom}_${normalizedCoord.x}_${(normalizedCoord.y)}.jpg`
 
         // `/images/wfrp/${zoom}/tile_${normalizedCoord.x}_${(normalizedCoord.y-1)}.jpg`
 
@@ -307,16 +313,20 @@ async function initMap() {
 
       saveMarkersToMemory: function() {
         console.log(name());
-        localStorage.setItem('geoPoints', JSON.stringify(this.markers.map(m => m.export())))
+        localStorage.setItem('geoPoints', JSON.stringify(this.markers
+          // .filter(m => m.setEditable)
+          .map(m => m.export())))
       },
 
       placeMarker: function(info) {
+        //
         console.log(name());
         //if no position, fuck it
         if (!info.position) return
 
         // make marker
         var marker = new google.maps.Marker({
+          ...info,
           position: info.position,
           map: map,
           data: info.data || {},
@@ -334,6 +344,9 @@ async function initMap() {
 
           //#########  make the inside fo the popup box
           var inputContainer = document.customCreateElement('form', {})
+          inputContainer.onsubmit = (e) => {
+            !allowEdits && e.preventDefault()
+          }
           var textField = document.customCreateElement('input', {
             type: "text",
             size: "31",
@@ -342,24 +355,26 @@ async function initMap() {
             value: marker.data.inputContent || ""
 
           }, inputContainer)
-          var saveButton = document.customCreateElement('button', {
-            innerText: "Submit",
-            onclick: (e) => {
-              console.log("Saved marker", marker);
-              marker.data.inputContent = textField.value
-              marker.save()
-              e.preventDefault()
-            }
-          }, inputContainer)
+          if (allowEdits) {
+            var saveButton = document.customCreateElement('button', {
+              innerText: "Submit",
+              onclick: (e) => {
+                console.log("Saved marker", marker);
+                marker.data.inputContent = textField.value
+                marker.save()
+                e.preventDefault()
+              }
+            }, inputContainer)
 
-          var saveButton = document.customCreateElement('button', {
-            innerText: "Delete",
-            onclick: (e) => {
-              console.log("Delete marker", marker);
-              this.deleteMarker(marker)
-              e.preventDefault()
-            }
-          }, inputContainer)
+            var deleteButton = document.customCreateElement('button', {
+              innerText: "Delete",
+              onclick: (e) => {
+                console.log("Delete marker", marker);
+                this.deleteMarker(marker)
+                e.preventDefault()
+              }
+            }, inputContainer)
+          }
 
           // #########
           marker.infowindow = new google.maps.InfoWindow({
@@ -384,8 +399,8 @@ async function initMap() {
 
         }
 
-
         this.markers.push(marker)
+
         marker.save()
       }
 
@@ -580,6 +595,10 @@ async function initMap() {
 
 
   var generaticTools = {
+    config: {
+      setDraggable: false,
+      setEditable: false,
+    },
     items: [],
     memory: {
       save: function(data) {
@@ -591,6 +610,7 @@ async function initMap() {
     },
 
     saveItems: function() {
+      console.log("saving lines");
       var tt = this.items.map(l => l.getPath()
         .getArray()
         // .map(p => )
@@ -600,7 +620,7 @@ async function initMap() {
     },
     loadItems: function() {
       var mem = this.memory.load()
-      console.log("loading items from mem", mem);
+      console.log("loading lines", mem);
       mem.map(linePath => {
         const line = new google.maps.Polyline({
           path: linePath,
@@ -619,8 +639,8 @@ async function initMap() {
     },
     updateLine: function(line) {
 
-      line.setDraggable(true)
-      line.setEditable(true)
+      line.setDraggable(this.config.setDraggable)
+      line.setEditable(this.config.setEditable)
       line.setOptions({
         strokeColor: 'red',
         strokeOpacity: 0,
@@ -701,7 +721,7 @@ async function initMap() {
       google.maps.event.addListener(drawingManager, 'markercomplete', (marker) => {
         console.log(marker);
         mapFunctions.markers.placeMarker({
-          position: marker.position
+          position: marker.position,
         });
         marker.setMap(null)
       });
@@ -732,8 +752,8 @@ async function initMap() {
       google.maps.event.addListener(drawingManager, 'rectanglecomplete', (rectangle) => {
         // rectangle.draggable
         // editable: true
-        rectangle.setDraggable(true)
-        rectangle.setEditable(true)
+        rectangle.setDraggable(this.config.setDraggable)
+        rectangle.setEditable(this.config.setEditable)
         console.log(rectangle.getBounds());
         overlay = new USGSOverlay(rectangle.getBounds(), "/statemap.jpg", map);
         overlay.setMap(map);
@@ -808,14 +828,21 @@ async function initMap() {
   makeControl("Clear lines", () => generaticTools.clearItems(), centerControlDiv, map);
   heatmaps.activate()
   states.activate()
-  generaticTools.draw()
-  generaticTools.loadItems()
+
+  var tools = generaticTools
+  tools.config = {
+    setDraggable: allowEdits,
+    setEditable: allowEdits,
+    // show
+  }
+  allowEdits && tools.draw()
+  tools.loadItems()
 
 
 
 
   var overlay = document.querySelector('#overlay')
   console.log(overlay);
-  overlay.style.webkitFilter = `sepia(50%) `
+  // overlay.style.webkitFilter = `sepia(50%) `
 
 }
