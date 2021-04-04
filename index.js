@@ -198,10 +198,10 @@ async function initMap() {
     }
   }
 
-  var states = await fetch("/states.json")
+  var states = await fetch("/data/states.json")
     .then(r => r.json())
 
-  var heatmaps = await fetch("/heatmaps.json")
+  var heatmaps = await fetch("/data/heatmaps.json")
     .then(r => r.json())
 
 
@@ -296,14 +296,7 @@ async function initMap() {
       },
       loadMarkers: function() {
         console.log(name());
-
-        if (false) {
-          var data = JSON.parse(fileString);
-        } else {
-          var data = JSON.parse(localStorage.getItem('geoPoints'));
-
-        }
-        console.log(data, JSON.parse(localStorage.getItem('geoPoints')));
+        var data = JSON.parse(localStorage.getItem('geoPoints'));
         // map.data.addGeoJson(data);
         if (data) data.map(marker => this.placeMarker({
           ...marker,
@@ -478,6 +471,13 @@ async function initMap() {
     downloadObjectAsJson(data, "WFRP-map-" + name)
   }
 
+
+  function importData(data) {
+    for (var [key, value] of Object.entries(data)) {
+      console.log("imported", key);
+      localStorage.setItem(key, JSON.stringify(value))
+    }
+  }
 
 
   function makeControl(text, fn, controlDiv, map) {
@@ -755,7 +755,7 @@ async function initMap() {
         rectangle.setDraggable(this.config.setDraggable)
         rectangle.setEditable(this.config.setEditable)
         console.log(rectangle.getBounds());
-        overlay = new USGSOverlay(rectangle.getBounds(), "/statemap.jpg", map);
+        overlay = new USGSOverlay(rectangle.getBounds(), "/data/statemap.jpg", map);
         overlay.setMap(map);
 
 
@@ -822,8 +822,42 @@ async function initMap() {
   */
 
 
-  makeControl("Export memory", () => exportData(JSON.parse(localStorage.getItem('geoPoints'))), centerControlDiv, map);
-  makeControl("Load view", () => loadView(map), centerControlDiv, map);
+  makeControl("Export memory", () => exportData({
+    geoPoints: JSON.parse(localStorage.getItem('geoPoints')),
+    geoLines: JSON.parse(localStorage.getItem('geoLines')),
+  }), centerControlDiv, map);
+
+  makeControl("Import memory", async () => {
+      const {
+        value: file
+      } = await Swal.fire({
+        title: 'Select image',
+        input: 'file',
+        inputAttributes: {
+          'accept': 'application/json',
+          'aria-label': 'Upload your profile picture'
+        }
+      })
+
+      if (file) {
+        const reader = new FileReader()
+        reader.onload = (e) => {
+          importData(JSON.parse(e.target.result))
+          Swal.fire({
+            title: 'Data imported!',
+            text: 'The page will now reload to import data'
+          })
+          .then(()=>window.location.reload(false))
+        }
+        reader.readAsText(file)
+        //
+
+      }
+    }
+
+
+    , centerControlDiv, map);
+
   makeControl("Clear markers", () => mapFunctions.markers.clearMarkers(), centerControlDiv, map);
   makeControl("Clear lines", () => generaticTools.clearItems(), centerControlDiv, map);
   heatmaps.activate()
