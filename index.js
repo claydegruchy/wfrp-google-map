@@ -806,7 +806,7 @@ async function initMap() {
 
 
 
-  function runImport() {
+  async function runImport() {
     const {
       value: file
     } = await Swal.fire({
