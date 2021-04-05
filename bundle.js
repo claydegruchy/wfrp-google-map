@@ -292,12 +292,12 @@ window.initMap = async function() {
 
       },
       loadView: function(map) {
-        console.log(name())
+        // console.log(name())
         var center = localStorage.getItem('center');
         var zoom = localStorage.getItem('zoom');
         // console.log(center, zoom);
-        map.setCenter(JSON.parse(center));
-        map.setZoom(Number(zoom));
+        // map.setCenter(JSON.parse(center));
+        // map.setZoom(Number(zoom));
       },
     },
 
@@ -716,15 +716,18 @@ window.initMap = async function() {
 
     },
 
-    addDeleteContext: ob => google.maps.event.addListener(ob, "contextmenu", (e) => {
-      const deleteMenu = new DeleteMenu();
+    addDeleteContext: function(ob) {
+      google.maps.event.addListener(ob, "contextmenu", (e) => {
+        const deleteMenu = new DeleteMenu();
 
-      // Check if click was on a vertex control point
-      if (e.vertex == undefined) {
-        return;
-      }
-      deleteMenu.open(map, ob.getPath(), e.vertex);
-    }),
+        // Check if click was on a vertex control point
+        if (e.vertex == undefined) {
+          return;
+        }
+        deleteMenu.open(map, ob.getPath(), e.vertex);
+        this.saveItems()
+      })
+    },
 
     draw: function() {
 
@@ -888,35 +891,12 @@ window.initMap = async function() {
       const Flatten = require('@flatten-js/core');
 
 
-      const {
-        polygon
-      } = Flatten;
-      const {
-        unify,
-        subtract,
-        intersect,
-        innerClip,
-        outerClip
-      } = Flatten.BooleanOperations;
-
-      const p1 = polygon([
-        [0, 30],
-        [30, 30],
-        [30, 0],
-        [0, 0]
-      ]);
-      const p2 = polygon([
-        [20, 5],
-        [20, 25],
-        [40, 15]
-      ]);
-      const p3 = unify(p1, p2);
 
 
 
       // console.log(name(), map.getBounds(),);
-      // const { polygon } = Flatten;
-      // const { unify } = Flatten.BooleanOperations;
+      const { polygon } = Flatten;
+      const { unify } = Flatten.BooleanOperations;
 
 
 
@@ -936,10 +916,21 @@ window.initMap = async function() {
         new google.maps.LatLng(85, 180)
       ];
 
-      var allPoints = [...mapFunctions.markers.markers.map(m => m.position), ...generaticTools.items.map(l => l.getPath().getArray()).flat()]
+      var allPoints = [
+        ...mapFunctions.markers.markers.map(m => m.position),
+        ...generaticTools.items.map(l => l.getPath().getArray()).flat()
+      ]
+      // .reverse()
       // .slice(14, 16)
 
       var revealRange = 100
+
+if (allPoints.length <1) {
+  return
+}
+
+
+
 
 
 
@@ -1058,6 +1049,7 @@ window.initMap = async function() {
     // show
   }
   allowEdits && tools.draw();
+
   if (params.story == "true") {
     await setDefaults()
   }
@@ -1069,8 +1061,7 @@ window.initMap = async function() {
   tools.loadItems()
   //load saved data
 
-  fogOfWar.activate()
-
+  // fogOfWar.activate()
 
 
   var overlay = document.querySelector('#overlay')
