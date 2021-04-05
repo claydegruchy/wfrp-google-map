@@ -387,9 +387,16 @@ async function initMap() {
           if (!info.imported) marker.select()
           // if (!info.imported) marker.infowindow.open(map, marker)
 
-          google.maps.event.addListener(marker, 'click', function() {
-            marker.select()
-          });
+          if (allowEdits) {
+            google.maps.event.addListener(marker, 'click', function() {
+              marker.select()
+            });
+          } else {
+            google.maps.event.addListener(marker, 'hover', function() {
+              marker.select()
+            });
+          }
+
 
         }
 
