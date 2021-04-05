@@ -30,22 +30,45 @@ document.__proto__.customCreateElement = (tag = 'div', attributes = {}, parent) 
 
 
 
-// add the google key
-document.customCreateElement('script', {
-  src: `https://maps.googleapis.com/maps/api/js?key=${params.key}&callback=initMap&libraries=visualization,drawing&v=weekly`,
-  defer: true
-}, document.querySelector('head'))
 
 
-
-
-
-async function initMap() {
+window.initMap = async function() {
 
   var allowEdits = false
   if (params.e == "drcjkhvltklkjlgcindtlluvnbjeurvg") {
     allowEdits = true
   }
+
+
+  function drawCircle(point, radius, dir) {
+    var d2r = Math.PI / 180; // degrees to radians
+    var r2d = 180 / Math.PI; // radians to degrees
+    var earthsradius = 3963; // 3963 is the radius of the earth in miles
+    var points = 32;
+
+    // find the raidus in lat/lon
+    var rlat = (radius / earthsradius) * r2d;
+    var rlng = rlat / Math.cos(point.lat() * d2r);
+
+    var extp = new Array();
+    if (dir == 1) {
+      var start = 0;
+      var end = points + 1
+    } // one extra here makes sure we connect the
+    else {
+      var start = points + 1;
+      var end = 0
+    }
+    for (var i = start;
+      (dir == 1 ? i < end : i > end); i = i + dir) {
+      var theta = Math.PI * (i / (points / 2));
+      ey = point.lng() + (rlng * Math.cos(theta)); // center a + radius x * cos(theta)
+      ex = point.lat() + (rlat * Math.sin(theta)); // center b + radius y * sin(theta)
+      extp.push(new google.maps.LatLng(ex, ey));
+    }
+    return extp;
+  }
+
 
   class DeleteMenu extends google.maps.OverlayView {
     constructor() {
@@ -260,17 +283,18 @@ async function initMap() {
   var mapFunctions = {
     view: {
       saveView: function() {
-        console.log(name())
+        // console.log(name())
         localStorage.setItem('center', JSON.stringify(map.getCenter().toJSON()))
-        // console.log(JSON.stringify(map.getCenter().toJSON()))
         localStorage.setItem('zoom', map.getZoom())
-        // console.log(map.getZoom())
+        // console.log(name(), map.getZoom(), JSON.stringify(map.getCenter().toJSON()))
+        // console.log(name(),)
+
       },
       loadView: function(map) {
-        // console.log(name())
+        console.log(name())
         var center = localStorage.getItem('center');
         var zoom = localStorage.getItem('zoom');
-        console.log(center, zoom);
+        // console.log(center, zoom);
         map.setCenter(JSON.parse(center));
         map.setZoom(Number(zoom));
       },
@@ -294,6 +318,7 @@ async function initMap() {
       deleteMarker: function(marker) {
         this.markers = this.markers.filter(m => m != marker)
         marker.setMap(null)
+        this.saveMarkersToMemory()
       },
       loadMarkers: function() {
         console.log(name());
@@ -332,6 +357,8 @@ async function initMap() {
             }
           },
         });
+
+        console.log("placing marker at ", info.position.toString());
 
 
         if (!marker.data.noInput) {
@@ -400,6 +427,7 @@ async function initMap() {
 
         }
 
+
         this.markers.push(marker)
 
         marker.save()
@@ -412,7 +440,6 @@ async function initMap() {
   document.onkeydown = function(evt) {
     if (evt.key === "Escape" || evt.key === "Esc") mapFunctions.markers.deselectAll()
   };
-
 
 
 
@@ -456,7 +483,8 @@ async function initMap() {
   }
 
 
-
+  mapFunctions.markers.loadMarkers(map);
+  mapFunctions.view.loadView(map);
 
 
 
@@ -563,7 +591,6 @@ async function initMap() {
   }
   console.log("loading heatmap", "done");
 
-  console.log(JSON.stringify(heatmaps.heatmaps));
 
 
 
@@ -847,6 +874,131 @@ async function initMap() {
   // overlay.activate()
 
 
+  // TEMPLATE
+  console.log("loading fogOfWar");
+  var fogOfWar = {
+    active: true,
+    toggle: () => {},
+    activate: function() {
+      console.log(name());
+      console.log(mapFunctions.markers.markers, generaticTools.items)
+
+
+      const Flatten = require('@flatten-js/core');
+
+
+      const {
+        polygon
+      } = Flatten;
+      const {
+        unify,
+        subtract,
+        intersect,
+        innerClip,
+        outerClip
+      } = Flatten.BooleanOperations;
+
+      const p1 = polygon([
+        [0, 30],
+        [30, 30],
+        [30, 0],
+        [0, 0]
+      ]);
+      const p2 = polygon([
+        [20, 5],
+        [20, 25],
+        [40, 15]
+      ]);
+      const p3 = unify(p1, p2);
+
+
+
+      // console.log(name(), map.getBounds(),);
+      // const { polygon } = Flatten;
+      // const { unify } = Flatten.BooleanOperations;
+
+
+
+      var outerbounds = [ // covers the (mercator projection) world
+        new google.maps.LatLng(85, 180),
+        new google.maps.LatLng(85, 90),
+        new google.maps.LatLng(85, 0),
+        new google.maps.LatLng(85, -90),
+        new google.maps.LatLng(85, -180),
+        new google.maps.LatLng(0, -180),
+        new google.maps.LatLng(-85, -180),
+        new google.maps.LatLng(-85, -90),
+        new google.maps.LatLng(-85, 0),
+        new google.maps.LatLng(-85, 90),
+        new google.maps.LatLng(-85, 180),
+        new google.maps.LatLng(0, 180),
+        new google.maps.LatLng(85, 180)
+      ];
+
+      var allPoints = [...mapFunctions.markers.markers.map(m => m.position), ...generaticTools.items.map(l => l.getPath().getArray()).flat()]
+      // .slice(14, 16)
+
+      var revealRange = 100
+
+
+
+      // var circles =
+      var polyCircles = allPoints.map(pos => drawCircle(pos, revealRange, -1))
+        .map(circle => polygon(circle.map(p => [p.lat(), p.lng()])))
+
+
+      var unifiedShape = polyCircles
+        .reduce((accumulator, currentValue) => unify(accumulator, currentValue))
+        .vertices.map(p => new google.maps.LatLng(p.x, p.y), )
+      console.log(unifiedShape);
+
+      // [p.toJSON().lat(), p.toJSON().lng()]
+      // console.log("circles", circles.map(circle => circle.map(p => console.log(p.lat()))))
+      // console.log("circles",circles.map(circle=>circle.map(p=>[p.toJSON().lat(),p.toJSON().lng()])));
+
+      // var simplePoints = allPoints
+
+
+
+
+      var circles = allPoints.map(pos => drawCircle(pos, revealRange, -1))
+
+      // Construct the polygon, including both paths.
+      const bermudaTriangle = new google.maps.Polygon({
+        // paths: [outerCoords, innerCoords],
+        paths: [outerbounds, unifiedShape],
+        strokeColor: "gray",
+        strokeOpacity: 0.8,
+        strokeWeight: 2,
+        fillColor: "black",
+        fillOpacity: 0.80,
+      });
+      bermudaTriangle.setMap(map);
+
+
+
+
+
+
+
+      // console.log(temp);
+
+
+
+
+
+      // console.log(allPoints);
+      //make a curcle around each
+      //cut those curcles out of the overlay shape
+
+
+      // Object.entries(this.items).map(item => {
+      //
+      // })
+    }
+  }
+  console.log("loading fogOfWar", "done");
+
   /*
   // TEMPLATE
     console.log("loading template");
@@ -868,10 +1020,10 @@ async function initMap() {
 
   var setDefaults = async () => {
     console.log("logging defaultl story ");
-    var states = await fetch("./story.json")
+    var story = await fetch("./story.json")
       .then(r => r.json())
 
-    return await importData(states)
+    return await importData(story)
   }
 
 
@@ -915,8 +1067,8 @@ async function initMap() {
 
   tools.loadItems()
   //load saved data
-  mapFunctions.markers.loadMarkers(map);
-  mapFunctions.view.loadView(map);
+
+  fogOfWar.activate()
 
 
 
@@ -925,3 +1077,11 @@ async function initMap() {
   // overlay.style.webkitFilter = `sepia(50%) `
 
 }
+
+
+// add the google key
+document.customCreateElement('script', {
+  src: `https://maps.googleapis.com/maps/api/js?key=${params.key}&callback=initMap&libraries=visualization,drawing&v=weekly`,
+  defer: true,
+  async: true,
+}, document.querySelector('head'))

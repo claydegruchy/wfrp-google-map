@@ -12,5 +12,7 @@
   },
   "author": "",
   "license": "ISC",
-  "dependencies": {}
+  "dependencies": {
+    "@flatten-js/core": "^1.2.22"
+  }
 }
