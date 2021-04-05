@@ -392,7 +392,7 @@ async function initMap() {
               marker.select()
             });
           } else {
-            google.maps.event.addListener(marker, 'hover', function() {
+            google.maps.event.addListener(marker, 'mouseover', function() {
               marker.select()
             });
           }
