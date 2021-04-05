@@ -270,7 +270,7 @@ async function initMap() {
         // console.log(name())
         var center = localStorage.getItem('center');
         var zoom = localStorage.getItem('zoom');
-        console.log(center,zoom);
+        console.log(center, zoom);
         map.setCenter(JSON.parse(center));
         map.setZoom(Number(zoom));
       },
@@ -604,7 +604,13 @@ async function initMap() {
         return localStorage.setItem('geoLines', JSON.stringify(data))
       },
       load: function() {
-        return JSON.parse(localStorage.getItem('geoLines') || []);
+        var l
+        try {
+          l = JSON.parse(localStorage.getItem('geoLines'));
+        } catch (e) {
+          l = []
+        }
+        return l
       }
     },
 
@@ -891,7 +897,7 @@ async function initMap() {
     setEditable: allowEdits,
     // show
   }
-  allowEdits && tools.draw() ;
+  allowEdits && tools.draw();
   if (params.story == "true") {
     await setDefaults()
   }
