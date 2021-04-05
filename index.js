@@ -291,12 +291,12 @@ window.initMap = async function() {
 
       },
       loadView: function(map) {
-        console.log(name())
+        // console.log(name())
         var center = localStorage.getItem('center');
         var zoom = localStorage.getItem('zoom');
         // console.log(center, zoom);
-        map.setCenter(JSON.parse(center));
-        map.setZoom(Number(zoom));
+        // map.setCenter(JSON.parse(center));
+        // map.setZoom(Number(zoom));
       },
     },
 
@@ -715,15 +715,18 @@ window.initMap = async function() {
 
     },
 
-    addDeleteContext: ob => google.maps.event.addListener(ob, "contextmenu", (e) => {
-      const deleteMenu = new DeleteMenu();
+    addDeleteContext: function(ob) {
+      google.maps.event.addListener(ob, "contextmenu", (e) => {
+        const deleteMenu = new DeleteMenu();
 
-      // Check if click was on a vertex control point
-      if (e.vertex == undefined) {
-        return;
-      }
-      deleteMenu.open(map, ob.getPath(), e.vertex);
-    }),
+        // Check if click was on a vertex control point
+        if (e.vertex == undefined) {
+          return;
+        }
+        deleteMenu.open(map, ob.getPath(), e.vertex);
+        this.saveItems()
+      })
+    },
 
     draw: function() {
 
@@ -887,35 +890,16 @@ window.initMap = async function() {
       const Flatten = require('@flatten-js/core');
 
 
-      const {
-        polygon
-      } = Flatten;
-      const {
-        unify,
-        subtract,
-        intersect,
-        innerClip,
-        outerClip
-      } = Flatten.BooleanOperations;
-
-      const p1 = polygon([
-        [0, 30],
-        [30, 30],
-        [30, 0],
-        [0, 0]
-      ]);
-      const p2 = polygon([
-        [20, 5],
-        [20, 25],
-        [40, 15]
-      ]);
-      const p3 = unify(p1, p2);
 
 
 
       // console.log(name(), map.getBounds(),);
-      // const { polygon } = Flatten;
-      // const { unify } = Flatten.BooleanOperations;
+      const {
+        polygon
+      } = Flatten;
+      const {
+        unify
+      } = Flatten.BooleanOperations;
 
 
 
@@ -935,22 +919,71 @@ window.initMap = async function() {
         new google.maps.LatLng(85, 180)
       ];
 
-      var allPoints = [...mapFunctions.markers.markers.map(m => m.position), ...generaticTools.items.map(l => l.getPath().getArray()).flat()]
+      var allPoints = [
+        ...mapFunctions.markers.markers.map(m => m.position),
+        ...generaticTools.items.map(l => l.getPath().getArray()).flat()
+      ]
+      // .reverse()
       // .slice(14, 16)
 
       var revealRange = 100
 
+      if (allPoints.length < 1) {
+        return
+      }
+
+      var jsts = require('jsts')
+
+      var googleMaps2JSTS = function(boundaries) {
+        var coordinates = [];
+        for (var i = 0; i < boundaries.getLength(); i++) {
+          coordinates.push(new jsts.geom.Coordinate(
+            boundaries.getAt(i).lat(), boundaries.getAt(i).lng()));
+        }
+        return coordinates;
+      };
+
+      var jsts2googleMaps = function(geometry) {
+        var coordArray = geometry.getCoordinates();
+        GMcoords = [];
+        for (var i = 0; i < coordArray.length; i++) {
+          GMcoords.push(new google.maps.LatLng(coordArray[i].x, coordArray[i].y));
+        }
+        return GMcoords;
+      }
+
+
+      var geometryFactory = new jsts.geom.GeometryFactory();
+      // var JSTSpoly1 = ;
+      // JSTSpoly1.normalize();
+      // var JSTSpoly2 = geometryFactory.createPolygon(geometryFactory.createLinearRing(googleMaps2JSTS(poly2.getPath())));
+      // JSTSpoly2.normalize();
+
+
+      // var JSTSpolyUnion = JSTSpoly1.union(JSTSpoly2);
+      // var outputPath = jsts2googleMaps(JSTSpolyUnion);
 
 
       // var circles =
       var polyCircles = allPoints.map(pos => drawCircle(pos, revealRange, -1))
-        .map(circle => polygon(circle.map(p => [p.lat(), p.lng()])))
+        .map(circle => new google.maps.Polygon({
+          paths: circle
+        }))
+        .map(circle => {
+          var c = geometryFactory.createPolygon(geometryFactory.createLinearRing(googleMaps2JSTS(circle.getPath())))
+          c.normalize()
+          return c
+        })
 
+      // .forEach(c=>c.setMap(map))
 
+      var unifiedShape = [...polyCircles]
+      console.log("polyCircles", polyCircles);
       var unifiedShape = polyCircles
-        .reduce((accumulator, currentValue) => unify(accumulator, currentValue))
-        .vertices.map(p => new google.maps.LatLng(p.x, p.y), )
-      console.log(unifiedShape);
+      .reduce((accumulator, currentValue) => currentValue.union(accumulator))
+      //   .vertices.map(p => new google.maps.LatLng(p.x, p.y), )
+      // console.log(unifiedShape);
+      unifiedShape = jsts2googleMaps(unifiedShape)
 
       // [p.toJSON().lat(), p.toJSON().lng()]
       // console.log("circles", circles.map(circle => circle.map(p => console.log(p.lat()))))
@@ -961,8 +994,7 @@ window.initMap = async function() {
 
 
 
-      var circles = allPoints.map(pos => drawCircle(pos, revealRange, -1))
-
+      // var circles = allPoints.map(pos => drawCircle(pos, revealRange, -1))
       // Construct the polygon, including both paths.
       const bermudaTriangle = new google.maps.Polygon({
         // paths: [outerCoords, innerCoords],
@@ -975,7 +1007,7 @@ window.initMap = async function() {
       });
       bermudaTriangle.setMap(map);
 
-
+      console.log("bermudaTriangle.getPath() ", bermudaTriangle.getPath());
 
 
 
@@ -1057,6 +1089,7 @@ window.initMap = async function() {
     // show
   }
   allowEdits && tools.draw();
+
   if (params.story == "true") {
     await setDefaults()
   }
@@ -1069,7 +1102,6 @@ window.initMap = async function() {
   //load saved data
 
   fogOfWar.activate()
-
 
 
   var overlay = document.querySelector('#overlay')

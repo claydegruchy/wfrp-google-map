@@ -13,6 +13,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@flatten-js/core": "^1.2.22"
+    "@flatten-js/core": "^1.2.22",
+    "jsts": "^2.6.1",
+    "polygon-clipping": "^0.15.2"
   }
 }
