@@ -37,7 +37,7 @@ document.__proto__.customCreateElement = (tag = 'div', attributes = {}, parent) 
 window.initMap = async function() {
 
   var allowEdits = false
-  if (params.e == "drcjkhvltklkjlgcindtlluvnbjeurvg") {
+  if (params.diag == "true") {
     allowEdits = true
   }
 
@@ -886,14 +886,18 @@ window.initMap = async function() {
 
     active: false,
     toggle: function() {
-      console.log("toggle");
+      console.log("toggling fow, switcching from:", this.active);
       if (!this.active) {
+        console.log("turning on");
         this.shape.setMap(map);
-        //
+
       } else {
+        console.log("turning off");
         this.shape.setMap(null);
 
       }
+      this.active = !this.active
+
     },
     activate: function() {
       console.log(name());
@@ -936,8 +940,6 @@ window.initMap = async function() {
         ...mapFunctions.markers.markers.map(m => m.position),
         ...generaticTools.items.map(l => l.getPath().getArray()).flat()
       ]
-      // .reverse()
-      // .slice(14, 16)
 
       var revealRange = 100
 
@@ -947,10 +949,6 @@ window.initMap = async function() {
 
 
 
-
-
-
-      // var circles =
       var polyCircles = allPoints.map(pos => drawCircle(pos, revealRange, -1))
         .map(circle => polygon(circle.map(p => [p.lat(), p.lng()])))
 
@@ -960,11 +958,6 @@ window.initMap = async function() {
         .vertices.map(p => new google.maps.LatLng(p.x, p.y), )
       console.log(unifiedShape);
 
-      // [p.toJSON().lat(), p.toJSON().lng()]
-      // console.log("circles", circles.map(circle => circle.map(p => console.log(p.lat()))))
-      // console.log("circles",circles.map(circle=>circle.map(p=>[p.toJSON().lat(),p.toJSON().lng()])));
-
-      // var simplePoints = allPoints
 
 
 
@@ -989,20 +982,6 @@ window.initMap = async function() {
 
 
 
-      // console.log(temp);
-
-
-
-
-
-      // console.log(allPoints);
-      //make a curcle around each
-      //cut those curcles out of the overlay shape
-
-
-      // Object.entries(this.items).map(item => {
-      //
-      // })
     }
   }
   console.log("loading fogOfWar", "done");
@@ -1049,6 +1028,11 @@ window.initMap = async function() {
 
   makeControl("Import memory", async () => runImport(), centerControlDiv, map);
 
+
+  makeControl("Clear memory", () => {
+    memories.forEach(v => localStorage.removeItem(v));
+  }, centerControlDiv, map);
+
   if (allowEdits) {
     makeControl("Clear markers", () => mapFunctions.markers.clearMarkers(), centerControlDiv, map);
     makeControl("Clear lines", () => generaticTools.clearItems(), centerControlDiv, map);
@@ -1057,15 +1041,13 @@ window.initMap = async function() {
 
   }
 
-  makeControl("Clear memory", () => {
-    memories.forEach(v => localStorage.removeItem(v));
-  }, centerControlDiv, map);
+  makeControl("Toggle fog of war (experimental)", async () => fog.toggle(), centerControlDiv, map);
+
 
 
   fog = fogOfWar.activate()
 
 
-  makeControl("Toggle fog of war ()", async () => runImport(), centerControlDiv, map);
 
 
   var tools = generaticTools
@@ -1076,14 +1058,24 @@ window.initMap = async function() {
   }
   allowEdits && tools.draw();
 
-
+  var loadStory = async () => {
+    await setDefaults()
+    rawParams.delete('story')
+    rawParams.delete('diag')
+    window.location = window.location.origin + window.location.pathname + '?' + rawParams.toString()
+  }
 
   if (params.story == "true") {
-    await setDefaults()
-    // .then(()=>window.location.reload(false))
-    rawParams.delete('story')
-    window.location=window.location.origin + window.location.pathname + '?'+rawParams.toString()
+    loadStory()
   }
+
+  makeControl("Load story mode", async () => loadStory(), centerControlDiv, map);
+  makeControl("Load diag mode", async () => {
+    rawParams.append("diag", "true")
+    rawParams.delete('story')
+    window.location = window.location.origin + window.location.pathname + '?' + rawParams.toString()
+  }, centerControlDiv, map);
+
 
   // setDefaults
 
