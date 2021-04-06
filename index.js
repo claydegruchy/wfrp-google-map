@@ -1,5 +1,6 @@
+var rawParams = new URLSearchParams(window.location.search)
 var params = Object.fromEntries(
-  new URLSearchParams(window.location.search)
+  rawParams
 );
 
 // var body = document.querySelector("body")
@@ -881,8 +882,18 @@ window.initMap = async function() {
   // TEMPLATE
   console.log("loading fogOfWar");
   var fogOfWar = {
-    active: true,
-    toggle: () => {},
+
+    active: false,
+    toggle: function() {
+      console.log("toggle");
+      if (!this.active) {
+        this.shape.setMap(map);
+        //
+      } else {
+        this.shape.setMap(null);
+
+      }
+    },
     activate: function() {
       console.log(name());
       console.log(mapFunctions.markers.markers, generaticTools.items)
@@ -960,7 +971,7 @@ window.initMap = async function() {
       var circles = allPoints.map(pos => drawCircle(pos, revealRange, -1))
 
       // Construct the polygon, including both paths.
-      const bermudaTriangle = new google.maps.Polygon({
+      this.shape = new google.maps.Polygon({
         // paths: [outerCoords, innerCoords],
         paths: [outerbounds, unifiedShape],
         strokeColor: "gray",
@@ -969,11 +980,11 @@ window.initMap = async function() {
         fillColor: "black",
         fillOpacity: 0.80,
       });
-      bermudaTriangle.setMap(map);
+      // this.shape.setMap(map);
 
 
 
-
+      return this
 
 
 
@@ -1050,6 +1061,12 @@ window.initMap = async function() {
   }, centerControlDiv, map);
 
 
+  fog = fogOfWar.activate()
+
+
+  makeControl("Toggle fog of war ()", async () => runImport(), centerControlDiv, map);
+
+
   var tools = generaticTools
   tools.config = {
     setDraggable: allowEdits,
@@ -1058,22 +1075,24 @@ window.initMap = async function() {
   }
   allowEdits && tools.draw();
 
+
+
   if (params.story == "true") {
     await setDefaults()
+    // .then(()=>window.location.reload(false))
+    rawParams.delete('story')
+    window.location=window.location.origin + window.location.pathname + '?'+rawParams.toString()
   }
 
   // setDefaults
 
+  var overlay = document.querySelector('#overlay')
 
 
   tools.loadItems()
   //load saved data
 
-  // fogOfWar.activate()
 
-
-  var overlay = document.querySelector('#overlay')
-  console.log(overlay);
   // overlay.style.webkitFilter = `sepia(50%) `
 
 }
