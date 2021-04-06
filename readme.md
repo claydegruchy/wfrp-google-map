@@ -15,3 +15,9 @@ https://claydegruchy.github.io/wfrp-google-map?story=true&key=sommethinng
 
 # Thanks
 Based heavily on the work from gitzmansgallery.com, a big inspiration for this project.
+
+## Todo
+- [ ] I'd like to make this tool interact with the repo that contains the storyline of our RPG campagin.
+  - Like various specific interactions or scenes could get geocoded (ie you meet at the prancing pony {GEO:[12,43]}) and this tool could scan for those geo markers and mark them on the map, then clicking the marker on the map could display the text of that encounter
+- [ ] its total spaghetti behind the scenes so that needs fixing
+- [ ] Fog of war 
