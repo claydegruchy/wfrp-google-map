@@ -284,7 +284,7 @@ window.initMap = async function() {
   var mapFunctions = {
     view: {
       saveView: function() {
-        // console.log(name())
+        console.log(name())
         localStorage.setItem('center', JSON.stringify(map.getCenter().toJSON()))
         localStorage.setItem('zoom', map.getZoom())
         // console.log(name(), map.getZoom(), JSON.stringify(map.getCenter().toJSON()))
@@ -292,7 +292,7 @@ window.initMap = async function() {
 
       },
       loadView: function(map) {
-        // console.log(name())
+        console.log(name())
         var center = localStorage.getItem('center');
         var zoom = localStorage.getItem('zoom');
         // console.log(center, zoom);
@@ -323,7 +323,7 @@ window.initMap = async function() {
       },
       loadMarkers: function() {
         console.log(name());
-        var data = JSON.parse(localStorage.getItem('geoPoints') || []);
+        var data = JSON.parse(localStorage.getItem('geoPoints'));
         // map.data.addGeoJson(data);
         if (data) data.map(marker => this.placeMarker({
           ...marker,

@@ -7,7 +7,7 @@ This tool requires a few url params to operate:
 - `tileURL` => the domain of the host of the image tiles. I'll eventually upload my own to this project
 # Running
 - clone
-- `reload -b` in directory
+- `npm start` in directory
 
 # Thanks
 Based heavily on the work from gitzmansgallery.com, a big inspiration for this project.
