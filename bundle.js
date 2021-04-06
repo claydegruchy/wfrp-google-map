@@ -296,8 +296,8 @@ window.initMap = async function() {
         var center = localStorage.getItem('center');
         var zoom = localStorage.getItem('zoom');
         // console.log(center, zoom);
-        // map.setCenter(JSON.parse(center));
-        // map.setZoom(Number(zoom));
+        map.setCenter(JSON.parse(center));
+        map.setZoom(Number(zoom));
       },
     },
 
@@ -475,7 +475,8 @@ window.initMap = async function() {
 
 
 
-
+  mapFunctions.markers.loadMarkers(map);
+  mapFunctions.view.loadView(map);
 
 
   function bindViewListeners(mapLayer) {
@@ -484,8 +485,7 @@ window.initMap = async function() {
   }
 
 
-  mapFunctions.markers.loadMarkers(map);
-  mapFunctions.view.loadView(map);
+
 
 
 
@@ -662,6 +662,7 @@ window.initMap = async function() {
     loadItems: function() {
       var mem = this.memory.load()
       console.log("loading lines", mem);
+      if (!mem) return
       mem.map(linePath => {
         const line = new google.maps.Polyline({
           path: linePath,
@@ -895,8 +896,12 @@ window.initMap = async function() {
 
 
       // console.log(name(), map.getBounds(),);
-      const { polygon } = Flatten;
-      const { unify } = Flatten.BooleanOperations;
+      const {
+        polygon
+      } = Flatten;
+      const {
+        unify
+      } = Flatten.BooleanOperations;
 
 
 
@@ -925,9 +930,9 @@ window.initMap = async function() {
 
       var revealRange = 100
 
-if (allPoints.length <1) {
-  return
-}
+      if (allPoints.length < 1) {
+        return
+      }
 
 
 
@@ -1018,16 +1023,16 @@ if (allPoints.length <1) {
     return await importData(story)
   }
 
-
+  var memories = [
+    "center",
+    "zoom",
+    "geoPoints",
+    "geoLines",
+  ]
 
   makeControl("Export memory", () => {
     var x = {};
-    [
-      "center",
-      "zoom",
-      "geoPoints",
-      "geoLines",
-    ].forEach(v => x[v] = JSON.parse(localStorage.getItem(v)));
+    memories.forEach(v => x[v] = JSON.parse(localStorage.getItem(v)));
     exportData(x);
   }, centerControlDiv, map);
 
@@ -1040,6 +1045,10 @@ if (allPoints.length <1) {
     states.activate()
 
   }
+
+  makeControl("Clear memory", () => {
+    memories.forEach(v => localStorage.removeItem(v));
+  }, centerControlDiv, map);
 
 
   var tools = generaticTools
