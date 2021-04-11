@@ -1,254 +1,34 @@
-var rawParams = new URLSearchParams(window.location.search)
-var params = Object.fromEntries(
-  rawParams
-);
+const Handlebars = require('handlebars');
 
-// var body = document.querySelector("body")
-// log("old",body);
-// body.setAttribute('filter', 'url(#blur-and-invert)')
+// var potionTemplate = Handlebars.compile(potionTemplate);
 
-
-// log("old","loaded", "customCreateElement")
-document.__proto__.customCreateElement = (tag = 'div', attributes = {}, parent) => {
-  // // log("old","customCreateElement", tag, attributes)
-  var myNewElement = document.createElement(tag);
-  for (var a in attributes) {
-    if (myNewElement[a] == '' || typeof attributes[a] == 'function') {
-      myNewElement[a] = attributes[a]
-    } else {
-      myNewElement.setAttribute(a, attributes[a]);
-
-    }
-  }
-  if (parent) parent.appendChild(myNewElement)
-  return myNewElement;
-}
-// params
-
-
-
-
-var log = (code, ...args) => {
-  if (code != "parseLocationNames") return
-  console.log(code, "=>", ...args);
-}
 
 
 
 
 window.initMap = async function() {
 
-  var allowEdits = false
-  if (params.diag == "true") {
-    allowEdits = true
+  function name() {
+    return arguments.callee.caller.name
   }
 
-
-  function drawCircle(point, radius, dir) {
-    if (!point) {
-      return
-    }
-    try {
-      var d2r = Math.PI / 180; // degrees to radians
-      var r2d = 180 / Math.PI; // radians to degrees
-      var earthsradius = 3963; // 3963 is the radius of the earth in miles
-      var points = 32;
-
-      // find the raidus in lat/lon
-      var rlat = (radius / earthsradius) * r2d;
-      var rlng = rlat / Math.cos(point.lat() * d2r);
-
-      var extp = new Array();
-      if (dir == 1) {
-        var start = 0;
-        var end = points + 1
-      } // one extra here makes sure we connect the
-      else {
-        var start = points + 1;
-        var end = 0
-      }
-      for (var i = start;
-        (dir == 1 ? i < end : i > end); i = i + dir) {
-        var theta = Math.PI * (i / (points / 2));
-        ey = point.lng() + (rlng * Math.cos(theta)); // center a + radius x * cos(theta)
-        ex = point.lat() + (rlat * Math.sin(theta)); // center b + radius y * sin(theta)
-        extp.push(new google.maps.LatLng(ex, ey));
-      }
-      return extp;
-    } catch (e) {
-      console.error(e);
-      return []
-    } finally {
-
-    }
-
-  }
+  // load params
+  var rawParams = new URLSearchParams(window.location.search)
+  var params = Object.fromEntries(
+    rawParams
+  );
 
 
-  class DeleteMenu extends google.maps.OverlayView {
-    constructor() {
-      super();
-      this.div_ = document.createElement("div");
-      this.div_.className = "delete-menu";
-      this.div_.innerHTML = "Delete";
-      const menu = this;
-      google.maps.event.addDomListener(this.div_, "click", () => {
-        menu.removeVertex();
-      });
-    }
-    onAdd() {
-      const deleteMenu = this;
-      const map = this.getMap();
-      this.getPanes().floatPane.appendChild(this.div_);
-      // mousedown anywhere on the map except on the menu div will close the
-      // menu.
-      this.divListener_ = google.maps.event.addDomListener(
-        map.getDiv(),
-        "mousedown",
-        (e) => {
-          if (e.target != deleteMenu.div_) {
-            deleteMenu.close();
-          }
-        },
-        true
-      );
-    }
-    onRemove() {
-      if (this.divListener_) {
-        google.maps.event.removeListener(this.divListener_);
-      }
-      this.div_.parentNode.removeChild(this.div_);
-      // clean up
-      this.set("position", null);
-      this.set("path", null);
-      this.set("vertex", null);
-    }
-    close() {
-      this.setMap(null);
-    }
-    draw() {
-      const position = this.get("position");
-      const projection = this.getProjection();
 
-      if (!position || !projection) {
-        return;
-      }
-      const point = projection.fromLatLngToDivPixel(position);
-      this.div_.style.top = point.y + "px";
-      this.div_.style.left = point.x + "px";
-    }
-    /**
-     * Opens the menu at a vertex of a given path.
-     */
-    open(map, path, vertex) {
-      this.set("position", path.getAt(vertex));
-      this.set("path", path);
-      this.set("vertex", vertex);
-      this.setMap(map);
-      this.removeVertex();
-    }
-    /**
-     * Deletes the vertex from the path.
-     */
-    removeVertex() {
-      const path = this.get("path");
-      const vertex = this.get("vertex");
-
-      if (!path || vertex == undefined) {
-        this.close();
-        return;
-      }
-      path.removeAt(vertex);
-      this.close();
-    }
-  }
-
-  class USGSOverlay extends google.maps.OverlayView {
-    constructor(bounds, image) {
-      super();
-      // Initialize all properties.
-      this.bounds_ = bounds;
-      this.image_ = image;
-      // Define a property to hold the image's div. We'll
-      // actually create this div upon receipt of the onAdd()
-      // method so we'll leave it null for now.
-      this.div_ = null;
-    }
-    updateBounds(bounds) {
-      this.bounds_ = bounds
-      this.draw()
-    }
-    /**
-     * onAdd is called when the map's panes are ready and the overlay has been
-     * added to the map.
-     */
-    onAdd() {
-      this.div_ = document.createElement("div");
-      this.div_.style.borderStyle = "none";
-      this.div_.style.borderWidth = "0px";
-      this.div_.style.position = "absolute";
-      // Create the img element and attach it to the div.
-      const img = document.createElement("img");
-      img.src = this.image_;
-      img.style.width = "100%";
-      img.style.height = "100%";
-      img.style.position = "absolute";
-      img.style.opacity = 0.5;
-
-
-      this.div_.appendChild(img);
-      // Add the element to the "overlayLayer" pane.
-      const panes = this.getPanes();
-      panes.overlayLayer.appendChild(this.div_);
-    }
-    draw() {
-      // We use the south-west and north-east
-      // coordinates of the overlay to peg it to the correct position and size.
-      // To do this, we need to retrieve the projection from the overlay.
-      const overlayProjection = this.getProjection();
-      // Retrieve the south-west and north-east coordinates of this overlay
-      // in LatLngs and convert them to pixel coordinates.
-      // We'll use these coordinates to resize the div.
-      const sw = overlayProjection.fromLatLngToDivPixel(
-        this.bounds_.getSouthWest()
-      );
-      const ne = overlayProjection.fromLatLngToDivPixel(
-        this.bounds_.getNorthEast()
-      );
-
-      // Resize the image's div to fit the indicated dimensions.
-      if (this.div_) {
-        this.div_.style.left = sw.x + "px";
-        this.div_.style.top = ne.y + "px";
-        this.div_.style.width = ne.x - sw.x + "px";
-        this.div_.style.height = sw.y - ne.y + "px";
-      }
-    }
-    /**
-     * The onRemove() method will be called automatically from the API if
-     * we ever set the overlay's map property to 'null'.
-     */
-    onRemove() {
-      if (this.div_) {
-        this.div_.parentNode.removeChild(this.div_);
-        this.div_ = null;
-      }
-    }
-  }
-
-  var states = await fetch("./data/states.json")
-    .then(r => r.json())
-
-  var heatmaps = await fetch("./data/heatmaps.json")
-    .then(r => r.json())
 
 
   const map = new google.maps.Map(document.getElementById("map"), {
     center: {
-      lat: 0,
-      lng: 0
+      // altdorf
+      lat: 31.874268441160677,
+      lng: -16.277407946030955
     },
-    zoom: 1,
+    zoom: 6,
     streetViewControl: false,
     mapTypeControlOptions: {
       mapTypeIds: ["WFRP"],
@@ -278,7 +58,7 @@ window.initMap = async function() {
     tileSize: new google.maps.Size(256, 256),
     maxZoom: 7,
     minZoom: 3,
-    radius: 10000,
+    // radius: 10000,
     name: "WFRP",
   });
   map.mapTypes.set("WFRP", wfrpMapType);
@@ -286,12 +66,188 @@ window.initMap = async function() {
 
 
 
+  // Normalizes the coords that tiles repeat across the x axis (horizontally)
+  // like the standard Google map tiles.
+  function getNormalizedCoord(coord, zoom) {
+    const y = coord.y;
+    let x = coord.x;
+    // tile range in one direction range is dependent on zoom level
+    // 0 = 1 tile, 1 = 2 tiles, 2 = 4 tiles, 3 = 8 tiles, etc
+    const tileRange = 1 << zoom;
 
+    // don't repeat across y-axis (vertically)
+    if (y < 0 || y >= tileRange) {
+      return null;
+    }
 
-
-  function name() {
-    return arguments.callee.caller.name
+    // repeat across x-axis
+    if (x < 0 || x >= tileRange) {
+      x = ((x % tileRange) + tileRange) % tileRange;
+    }
+    return {
+      x: x,
+      y: y
+    };
   }
+
+
+  /*
+
+  control zoom
+    save zoom
+    load from file
+
+  control view position
+    save positon
+    load from file
+
+  markers
+    place
+    comment on
+    delete
+    load from file
+    save
+
+  path
+    place
+    modify
+    delete
+    load from file
+    save
+
+  optional extras
+    layers
+    states
+    fow
+
+
+  */
+
+  map.handlers = {}
+
+  // var handlers = map.handlers
+  map.handlers.defaults = {
+    maxViewHistory: 20
+  }
+
+  map.handlers.memory = {
+    save: (name, value) => localStorage.setItem(name, value),
+    load: (name) => {
+      var trx = localStorage.getItem(name)
+      try {
+        var m = JSON.parse(trx);
+        console.log(trx, m);
+        return m
+      } catch (e) {
+        return undefined
+      }
+    },
+  }
+
+
+  map.handlers.view = {
+    viewHistory: [],
+    init: function(map) {
+      console.info("view", name());
+      map.addListener('zoom_changed', () => this.updateView());
+      map.addListener('center_changed', () => this.updateView());
+      this.map = map
+
+      return this
+    },
+    setView: function(position, zoom) {
+      console.info(name(), position, zoom);
+      if (!position || !zoom) {
+        console.warn("must supply both position and zoom", position, zoom);
+        return
+      }
+      this.map.setCenter(position);
+      this.map.setZoom(Number(zoom));
+      this.updateView()
+    },
+
+    loadViewFromMemory: function() {
+      console.info(name());
+      this.setView(this.map.handlers.memory.load("center"), this.map.handlers.memory.load("zoom"))
+    },
+    updateView: function() {
+      console.info(name());
+      var zoom = this.map.getZoom()
+      var position = this.map.getCenter().toJSON()
+      this.map.handlers.memory.save("center", JSON.stringify(position))
+      this.map.handlers.memory.save("zoom", zoom)
+      // update histroy
+      this.viewHistory.push({
+        zoom,
+        position
+      })
+      if (this.viewHistory.length > this.map.handlers.defaults.maxViewHistory) {
+        this.viewHistory = this.viewHistory.slice(-this.map.handlers.defaults.maxViewHistory)
+      }
+    },
+  }
+
+  var view = map.handlers.view.init(map)
+  view.loadViewFromMemory()
+
+
+
+
+  map.handlers.markers = {
+    init: function(map) {
+      console.info(name());
+      this.map = map
+
+      return this
+    },
+
+
+  }
+
+  var markers = map.handlers.markers.init(map)
+
+
+
+
+
+
+
+
+  // saveView: function() {
+  //   log("zoom", name())
+  //   localStorage.setItem('center', JSON.stringify(map.getCenter().toJSON()))
+  //   localStorage.setItem('zoom', map.getZoom())
+  //   // log("zoom",name(), map.getZoom(), JSON.stringify(map.getCenter().toJSON()))
+  //   // log("zoom",name(),)
+  //
+  // },
+  // loadView: function(map) {
+  //   log("zoom", name())
+  //   var center = localStorage.getItem('center');
+  //   var zoom = localStorage.getItem('zoom');
+  //   if (center || zoom) return
+  //
+  //   // log("old",center, zoom);
+  //   map.setCenter(JSON.parse(center));
+  //   map.setZoom(Number(zoom));
+  // },
+
+
+  return
+  return
+
+
+  var states = await fetch("./data/states.json")
+    .then(r => r.json())
+
+  var heatmaps = await fetch("./data/heatmaps.json")
+    .then(r => r.json())
+
+
+
+
+
+
 
   //view
 
@@ -463,31 +419,6 @@ window.initMap = async function() {
 
 
 
-
-  // Normalizes the coords that tiles repeat across the x axis (horizontally)
-  // like the standard Google map tiles.
-  function getNormalizedCoord(coord, zoom) {
-    const y = coord.y;
-    let x = coord.x;
-    // tile range in one direction range is dependent on zoom level
-    // 0 = 1 tile, 1 = 2 tiles, 2 = 4 tiles, 3 = 8 tiles, etc
-    const tileRange = 1 << zoom;
-    log("old", tileRange, zoom);
-
-    // don't repeat across y-axis (vertically)
-    if (y < 0 || y >= tileRange) {
-      return null;
-    }
-
-    // repeat across x-axis
-    if (x < 0 || x >= tileRange) {
-      x = ((x % tileRange) + tileRange) % tileRange;
-    }
-    return {
-      x: x,
-      y: y
-    };
-  }
 
 
 
@@ -1258,7 +1189,7 @@ window.initMap = async function() {
     log("parseLocationNames", "predict", "talabheim", talabheim.recalculateLocationOfRaw);
     // talabheim.recalculateLocationOfRaw
 
-    
+
 
 
 
@@ -1288,10 +1219,12 @@ window.initMap = async function() {
 
     log("parseLocationNames", "masterRecalculate", "talabheim", masterRecalculate(talabheim.raw));
 
-mapFunctions.markers.clearMarkers()
+    mapFunctions.markers.clearMarkers()
 
 
-    mapFunctions.markers.placeMarker({position: new google.maps.LatLng(...masterRecalculate(altdorf.raw))})
+    mapFunctions.markers.placeMarker({
+      position: new google.maps.LatLng(...masterRecalculate(altdorf.raw))
+    })
 
     mapFunctions.markers.placeMarker({
       position: new google.maps.LatLng(...masterRecalculate(talabheim.raw))
@@ -1304,8 +1237,18 @@ mapFunctions.markers.clearMarkers()
 
 
 
-    mapFunctions.markers.placeMarker({data:{inputContent:"Nuln"},position: new google.maps.LatLng(...masterRecalculate(run(locations.find(l => l.description.toLowerCase().includes("Nuln".toLowerCase())))))})
-    mapFunctions.markers.placeMarker({data:{inputContent:"Helmgart"},position: new google.maps.LatLng(...masterRecalculate(run(locations.find(l => l.description.toLowerCase().includes("Helmgart".toLowerCase())))))})
+    mapFunctions.markers.placeMarker({
+      data: {
+        inputContent: "Nuln"
+      },
+      position: new google.maps.LatLng(...masterRecalculate(run(locations.find(l => l.description.toLowerCase().includes("Nuln".toLowerCase())))))
+    })
+    mapFunctions.markers.placeMarker({
+      data: {
+        inputContent: "Helmgart"
+      },
+      position: new google.maps.LatLng(...masterRecalculate(run(locations.find(l => l.description.toLowerCase().includes("Helmgart".toLowerCase())))))
+    })
 
 
 
@@ -1317,7 +1260,6 @@ mapFunctions.markers.clearMarkers()
   parseLocationNames('./map/mapreader/foundImages_5120_empire_bw3.json')
 
 
-
   // ############ get place names ###############
 
 
@@ -1325,9 +1267,28 @@ mapFunctions.markers.clearMarkers()
 }
 
 
+// log("old","loaded", "customCreateElement")
+document.__proto__.customCreateElement = (tag = 'div', attributes = {}, parent) => {
+  // // log("old","customCreateElement", tag, attributes)
+  var myNewElement = document.createElement(tag);
+  for (var a in attributes) {
+    if (myNewElement[a] == '' || typeof attributes[a] == 'function') {
+      myNewElement[a] = attributes[a]
+    } else {
+      myNewElement.setAttribute(a, attributes[a]);
+
+    }
+  }
+  if (parent) parent.appendChild(myNewElement)
+  return myNewElement;
+}
+// params
+
+
+
 // add the google key
 document.customCreateElement('script', {
-  src: `https://maps.googleapis.com/maps/api/js?key=${params.key}&callback=initMap&libraries=visualization,drawing&v=weekly`,
+  src: `https://maps.googleapis.com/maps/api/js?key=${"AIzaSyAyXFcMs8AssuSNDtU9rUV0S5v4JSMTzDA"}&callback=initMap&libraries=visualization,drawing&v=weekly`,
   defer: true,
   async: true,
 }, document.querySelector('head'))
