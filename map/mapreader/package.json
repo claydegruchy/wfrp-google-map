@@ -1,0 +1,19 @@
+{
+  "name": "mapreader",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "makesecret": "printf  'repo: gcp-fn-template\nsecrets:\n  YOUR_ZENDESK_URL: hello\n  YOUR_ZENDESK_EMAIL: hello\n  YOUR_ZENDESK_API_TOKEN: hello\n  SUMOENDPOINT: hello\n  ACCESSTOKEN: hello' > secrets.yaml",
+"makestart": "printf '' > start.sh\nprintf 'env ' >> start.sh\ncat secrets.yaml | shyaml get-value secrets | sed -e 's/:[^://]/=\"/g;s/$/\"/g;s/ *=/=/g'| tr -s '\n' ' ' >> start.sh\nprintf ' nodemon --exec npm start'>>start.sh"
+
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@google-cloud/vision": "^2.3.1",
+    "tesseract.js": "^2.1.4"
+  }
+}

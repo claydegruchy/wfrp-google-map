@@ -1,4 +1,6 @@
 secret.yaml
+wfrp-*.json
+map/mapreader/test_images/*
 
 # Created by https://www.gitignore.io/api/node
 # Edit at https://www.gitignore.io/?templates=node

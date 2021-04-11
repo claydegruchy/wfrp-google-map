@@ -5,13 +5,13 @@ var params = Object.fromEntries(
 );
 
 // var body = document.querySelector("body")
-// console.log(body);
+// log("old",body);
 // body.setAttribute('filter', 'url(#blur-and-invert)')
 
 
-// console.log("loaded", "customCreateElement")
+// log("old","loaded", "customCreateElement")
 document.__proto__.customCreateElement = (tag = 'div', attributes = {}, parent) => {
-  // // console.log("customCreateElement", tag, attributes)
+  // // log("old","customCreateElement", tag, attributes)
   var myNewElement = document.createElement(tag);
   for (var a in attributes) {
     if (myNewElement[a] == '' || typeof attributes[a] == 'function') {
@@ -29,7 +29,10 @@ document.__proto__.customCreateElement = (tag = 'div', attributes = {}, parent) 
 
 
 
-
+var log = (code, ...args) => {
+  if (code != "parseLocationNames") return
+  console.log(code, "=>", ...args);
+}
 
 
 
@@ -43,32 +46,43 @@ window.initMap = async function() {
 
 
   function drawCircle(point, radius, dir) {
-    var d2r = Math.PI / 180; // degrees to radians
-    var r2d = 180 / Math.PI; // radians to degrees
-    var earthsradius = 3963; // 3963 is the radius of the earth in miles
-    var points = 32;
-
-    // find the raidus in lat/lon
-    var rlat = (radius / earthsradius) * r2d;
-    var rlng = rlat / Math.cos(point.lat() * d2r);
-
-    var extp = new Array();
-    if (dir == 1) {
-      var start = 0;
-      var end = points + 1
-    } // one extra here makes sure we connect the
-    else {
-      var start = points + 1;
-      var end = 0
+    if (!point) {
+      return
     }
-    for (var i = start;
-      (dir == 1 ? i < end : i > end); i = i + dir) {
-      var theta = Math.PI * (i / (points / 2));
-      ey = point.lng() + (rlng * Math.cos(theta)); // center a + radius x * cos(theta)
-      ex = point.lat() + (rlat * Math.sin(theta)); // center b + radius y * sin(theta)
-      extp.push(new google.maps.LatLng(ex, ey));
+    try {
+      var d2r = Math.PI / 180; // degrees to radians
+      var r2d = 180 / Math.PI; // radians to degrees
+      var earthsradius = 3963; // 3963 is the radius of the earth in miles
+      var points = 32;
+
+      // find the raidus in lat/lon
+      var rlat = (radius / earthsradius) * r2d;
+      var rlng = rlat / Math.cos(point.lat() * d2r);
+
+      var extp = new Array();
+      if (dir == 1) {
+        var start = 0;
+        var end = points + 1
+      } // one extra here makes sure we connect the
+      else {
+        var start = points + 1;
+        var end = 0
+      }
+      for (var i = start;
+        (dir == 1 ? i < end : i > end); i = i + dir) {
+        var theta = Math.PI * (i / (points / 2));
+        ey = point.lng() + (rlng * Math.cos(theta)); // center a + radius x * cos(theta)
+        ex = point.lat() + (rlat * Math.sin(theta)); // center b + radius y * sin(theta)
+        extp.push(new google.maps.LatLng(ex, ey));
+      }
+      return extp;
+    } catch (e) {
+      console.error(e);
+      return []
+    } finally {
+
     }
-    return extp;
+
   }
 
 
@@ -253,7 +267,7 @@ window.initMap = async function() {
         return "";
       }
       const bound = Math.pow(2, zoom);
-      // console.log(`http://www.gitzmansgallery.com/tiles/${zoom}_${normalizedCoord.x}_${(normalizedCoord.y-1)}.jpg`);
+      // log("old",`http://www.gitzmansgallery.com/tiles/${zoom}_${normalizedCoord.x}_${(normalizedCoord.y-1)}.jpg`);
       return (
         // `${params.tileURL}/tiles/${zoom}_${normalizedCoord.x}_${(normalizedCoord.y)}.jpg`
         // `http://${params.tileURL}/tiles/${zoom}_${normalizedCoord.x}_${(normalizedCoord.y)}.jpg`
@@ -285,18 +299,20 @@ window.initMap = async function() {
   var mapFunctions = {
     view: {
       saveView: function() {
-        console.log(name())
+        log("zoom", name())
         localStorage.setItem('center', JSON.stringify(map.getCenter().toJSON()))
         localStorage.setItem('zoom', map.getZoom())
-        // console.log(name(), map.getZoom(), JSON.stringify(map.getCenter().toJSON()))
-        // console.log(name(),)
+        // log("zoom",name(), map.getZoom(), JSON.stringify(map.getCenter().toJSON()))
+        // log("zoom",name(),)
 
       },
       loadView: function(map) {
-        console.log(name())
+        log("zoom", name())
         var center = localStorage.getItem('center');
         var zoom = localStorage.getItem('zoom');
-        // console.log(center, zoom);
+        if (center || zoom) return
+
+        // log("old",center, zoom);
         map.setCenter(JSON.parse(center));
         map.setZoom(Number(zoom));
       },
@@ -306,13 +322,13 @@ window.initMap = async function() {
     markers: {
       markers: [],
       deselectAll: function() {
-        console.log(name());
+        log("old", name());
         return this.markers
           .filter(m => m.deselect)
           .map(m => m.deselect())
       },
       clearMarkers: function() {
-        console.log(name(), map.length)
+        log("old", name(), map.length)
         this.markers.map(r => r.setMap(null))
         this.markers = []
         this.saveMarkersToMemory()
@@ -323,7 +339,7 @@ window.initMap = async function() {
         this.saveMarkersToMemory()
       },
       loadMarkers: function() {
-        console.log(name());
+        log("old", name());
         var data = JSON.parse(localStorage.getItem('geoPoints'));
         // map.data.addGeoJson(data);
         if (data) data.map(marker => this.placeMarker({
@@ -333,7 +349,7 @@ window.initMap = async function() {
       },
 
       saveMarkersToMemory: function() {
-        console.log(name());
+        log("old", name());
         localStorage.setItem('geoPoints', JSON.stringify(this.markers
           // .filter(m => m.setEditable)
           .map(m => m.export())))
@@ -341,7 +357,7 @@ window.initMap = async function() {
 
       placeMarker: function(info) {
         //
-        console.log(name());
+        log("old", name());
         //if no position, fuck it
         if (!info.position) return
 
@@ -360,7 +376,7 @@ window.initMap = async function() {
           },
         });
 
-        console.log("placing marker at ", info.position.toString());
+        log("old", "placing marker at ", info.position.toString());
 
 
         if (!marker.data.noInput) {
@@ -375,14 +391,14 @@ window.initMap = async function() {
             size: "31",
             maxlength: "31",
             tabindex: "-1",
-            value: marker.data.inputContent || ""
+            value: marker.data.inputContent + info.position.toString()
 
           }, inputContainer)
           if (allowEdits) {
             var saveButton = document.customCreateElement('button', {
               innerText: "Submit",
               onclick: (e) => {
-                console.log("Saved marker", marker);
+                log("old", "Saved marker", marker);
                 marker.data.inputContent = textField.value
                 marker.save()
                 e.preventDefault()
@@ -392,7 +408,7 @@ window.initMap = async function() {
             var deleteButton = document.customCreateElement('button', {
               innerText: "Delete",
               onclick: (e) => {
-                console.log("Delete marker", marker);
+                log("old", "Delete marker", marker);
                 this.deleteMarker(marker)
                 e.preventDefault()
               }
@@ -457,7 +473,7 @@ window.initMap = async function() {
     // tile range in one direction range is dependent on zoom level
     // 0 = 1 tile, 1 = 2 tiles, 2 = 4 tiles, 3 = 8 tiles, etc
     const tileRange = 1 << zoom;
-    console.log(tileRange, zoom);
+    log("old", tileRange, zoom);
 
     // don't repeat across y-axis (vertically)
     if (y < 0 || y >= tileRange) {
@@ -512,7 +528,7 @@ window.initMap = async function() {
 
   function importData(data) {
     for (var [key, value] of Object.entries(data)) {
-      console.log("imported", key);
+      log("old", "imported", key);
       localStorage.setItem(key, JSON.stringify(value))
     }
   }
@@ -547,7 +563,7 @@ window.initMap = async function() {
   const centerControlDiv = document.createElement("div");
 
   map.controls[google.maps.ControlPosition.LEFT].push(centerControlDiv);
-  console.log("ControlPosition", google.maps.ControlPosition)
+  log("old", "ControlPosition", google.maps.ControlPosition)
 
 
   //map.data.setControls(['Point']);
@@ -560,13 +576,13 @@ window.initMap = async function() {
 
 
 
-  console.log("loading heatmap");
+  log("old", "loading heatmap");
   var heatmaps = {
     heatmaps: heatmaps,
     activeMaps: [],
     activate: function() {
       Object.keys(this.heatmaps).map(heatmapName => {
-        console.log("making heatmap for", heatmapName);
+        log("old", "making heatmap for", heatmapName);
         var heatmap = new google.maps.visualization.HeatmapLayer({
           data: this.heatmaps[heatmapName].data.map((l, i) =>
             ({
@@ -591,22 +607,22 @@ window.initMap = async function() {
     }
 
   }
-  console.log("loading heatmap", "done");
+  log("old", "loading heatmap", "done");
 
 
 
 
 
 
-  console.log("loading states");
+  log("old", "loading states");
 
   var states = {
     states: states,
     active: [],
     activate: function(specificState) {
-      console.log("acctivating states", this.states);
+      log("old", "acctivating states", this.states);
       Object.entries(this.states).map(stateItem => {
-        console.log("making state for", stateItem[0]);
+        log("old", "making state for", stateItem[0]);
         const state = new google.maps.Polygon({
           paths: stateItem[1].coords,
           strokeColor: stateItem[1].colour,
@@ -624,12 +640,15 @@ window.initMap = async function() {
   }
 
 
-  console.log("loading states", "done");
+  log("old", "loading states", "done");
 
 
 
 
-  var generaticTools = {
+  var generaticToolsGenerator = {
+    init: function() {
+      return this
+    },
     config: {
       setDraggable: false,
       setEditable: false,
@@ -651,18 +670,18 @@ window.initMap = async function() {
     },
 
     saveItems: function() {
-      console.log("saving lines");
+      log("old", "saving lines");
       if (!allowEdits) return
       var tt = this.items.map(l => l.getPath()
         .getArray()
         // .map(p => )
       )
-      // console.log(JSON.stringify(tt));
+      // log("old",JSON.stringify(tt));
       this.memory.save(tt)
     },
     loadItems: function() {
       var mem = this.memory.load()
-      console.log("loading lines", mem);
+      log("old", "loading lines", mem);
       if (!mem) return
       mem.map(linePath => {
         const line = new google.maps.Polyline({
@@ -703,7 +722,7 @@ window.initMap = async function() {
       this.saveItems()
 
       var updateEventAction = () => {
-        console.log('Bounds changed.');
+        log("old", 'Bounds changed.');
         this.saveItems()
       }
 
@@ -765,7 +784,7 @@ window.initMap = async function() {
 
 
       google.maps.event.addListener(drawingManager, 'markercomplete', (marker) => {
-        console.log(marker);
+        log("old", marker);
         mapFunctions.markers.placeMarker({
           position: marker.position,
         });
@@ -774,7 +793,7 @@ window.initMap = async function() {
 
 
       google.maps.event.addListener(drawingManager, 'polylinecomplete', (line) => {
-        console.log("line compelte", line);
+        log("old", "line compelte", line);
         this.updateLine(line)
         const coords = line.getPath().getArray().map(coord => {
           return {
@@ -800,13 +819,13 @@ window.initMap = async function() {
         // editable: true
         rectangle.setDraggable(this.config.setDraggable)
         rectangle.setEditable(this.config.setEditable)
-        console.log(rectangle.getBounds());
+        log("old", rectangle.getBounds());
         overlay = new USGSOverlay(rectangle.getBounds(), "/data/statemap.jpg", map);
         overlay.setMap(map);
 
 
         google.maps.event.addListener(rectangle, 'bounds_changed', () => {
-          console.log('Bounds changed.');
+          log("old", 'Bounds changed.');
           overlay.updateBounds(rectangle.getBounds(rectangle))
         });
 
@@ -816,15 +835,16 @@ window.initMap = async function() {
     }
   }
 
+  var generaticTools = generaticToolsGenerator
 
 
 
-  console.log("loading overlay");
+  log("old", "loading overlay");
   var overlay = {
     items: {},
     active: [],
     activate: async function() {
-      console.log("acctivating", this.items);
+      log("old", "acctivating", this.items);
 
 
 
@@ -845,7 +865,7 @@ window.initMap = async function() {
       // })
     }
   }
-  console.log("loading overlay", "done");
+  log("old", "loading overlay", "done");
 
 
 
@@ -881,18 +901,18 @@ window.initMap = async function() {
 
 
   // TEMPLATE
-  console.log("loading fogOfWar");
+  log("old", "loading fogOfWar");
   var fogOfWar = {
 
     active: false,
     toggle: function() {
-      console.log("toggling fow, switcching from:", this.active);
+      log("old", "toggling fow, switcching from:", this.active);
       if (!this.active) {
-        console.log("turning on");
+        log("old", "turning on");
         this.shape.setMap(map);
 
       } else {
-        console.log("turning off");
+        log("old", "turning off");
         this.shape.setMap(null);
 
       }
@@ -900,8 +920,7 @@ window.initMap = async function() {
 
     },
     activate: function() {
-      console.log(name());
-      console.log(mapFunctions.markers.markers, generaticTools.items)
+      log("old", name());
 
 
       const Flatten = require('@flatten-js/core');
@@ -910,7 +929,7 @@ window.initMap = async function() {
 
 
 
-      // console.log(name(), map.getBounds(),);
+      // log("old",name(), map.getBounds(),);
       const {
         polygon
       } = Flatten;
@@ -936,13 +955,23 @@ window.initMap = async function() {
         new google.maps.LatLng(85, 180)
       ];
 
+
+      var mid = (arr) => arr[Math.floor((arr.length - 1) / 2)]
       var allPoints = [
-        ...mapFunctions.markers.markers.map(m => m.position),
-        ...generaticTools.items.map(l => l.getPath().getArray()).flat()
+        // mid(mapFunctions.markers.markers.map(m => m.position))
+        // ...mapFunctions.markers.markers.map(m => m.position)
+        mid(generaticTools.items.map(l => l.getPath().getArray()).flat())
+        // generaticTools.items.map(l => l.getPath().getArray()).flat()[0],
+        // generaticTools.items.map(l => l.getPath().getArray()).flat()[generaticTools.items.length]
+        // ...generaticTools.items.map(l => l.getPath().getArray()).flat()
       ]
 
-      var revealRange = 100
+      log("old", allPoints);
 
+
+
+
+      var revealRange = 500
       if (allPoints.length < 1) {
         return
       }
@@ -952,17 +981,31 @@ window.initMap = async function() {
       var polyCircles = allPoints.map(pos => drawCircle(pos, revealRange, -1))
         .map(circle => polygon(circle.map(p => [p.lat(), p.lng()])))
 
+      // polyCircles = [
+      //   polygon([
+      //     [1, 1],
+      //     [0, 1],
+      //     [0, 0],
+      //     [1, 0]
+      //   ]),
+      //   polygon([
+      //     [2, 2],
+      //     [0, 2],
+      //     [0, 0],
+      //   ])
+      // ]
+
 
       var unifiedShape = polyCircles
         .reduce((accumulator, currentValue) => unify(accumulator, currentValue))
         .vertices.map(p => new google.maps.LatLng(p.x, p.y), )
-      console.log(unifiedShape);
+      log("old", unifiedShape);
 
 
 
 
 
-      var circles = allPoints.map(pos => drawCircle(pos, revealRange, -1))
+      // var circles = allPoints.map(pos => drawCircle(pos, revealRange, -1))
 
       // Construct the polygon, including both paths.
       this.shape = new google.maps.Polygon({
@@ -984,29 +1027,29 @@ window.initMap = async function() {
 
     }
   }
-  console.log("loading fogOfWar", "done");
+  log("old", "loading fogOfWar", "done");
 
   /*
   // TEMPLATE
-    console.log("loading template");
+    log("old","loading template");
     var template = {
       items: {},
       active: [],
       activate: function() {
-        console.log("acctivating", this.items);
+        log("old","acctivating", this.items);
 
         Object.entries(this.items).map(item => {
 
         })
       }
     }
-    console.log("loading template", "done");
+    log("old","loading template", "done");
 
   */
 
 
   var setDefaults = async () => {
-    console.log("logging defaultl story ");
+    log("old", "logging defaultl story ");
     var story = await fetch("./story.json")
       .then(r => r.json())
 
@@ -1041,11 +1084,6 @@ window.initMap = async function() {
 
   }
 
-  makeControl("Toggle fog of war (experimental)", async () => fog.toggle(), centerControlDiv, map);
-
-
-
-  fog = fogOfWar.activate()
 
 
 
@@ -1062,6 +1100,7 @@ window.initMap = async function() {
     await setDefaults()
     rawParams.delete('story')
     rawParams.delete('diag')
+    rawParams.append('fow', true)
     window.location = window.location.origin + window.location.pathname + '?' + rawParams.toString()
   }
 
@@ -1077,6 +1116,8 @@ window.initMap = async function() {
   }, centerControlDiv, map);
 
 
+
+
   // setDefaults
 
   var overlay = document.querySelector('#overlay')
@@ -1085,8 +1126,202 @@ window.initMap = async function() {
   tools.loadItems()
   //load saved data
 
+  makeControl("Toggle fog of war (experimental)", async () => fog.toggle(), centerControlDiv, map);
+
+
+  //
+  // fog = fogOfWar.activate()
+  //
+  //
+  // if (params.fow == "true") {
+  //   fog.toggle()
+  // }
 
   // overlay.style.webkitFilter = `sepia(50%) `
+
+
+  // ############ get place names ###############
+
+
+
+
+  async function parseLocationNames(fileName) {
+    console.log("ok");
+    var center = function(arr) {
+      var x = arr.map(xy => xy[0]);
+      var y = arr.map(xy => xy[1]);
+      var cx = (Math.min(...x) + Math.max(...x)) / 2;
+      var cy = (Math.min(...y) + Math.max(...y)) / 2;
+      return [cx, cy];
+    }
+
+
+    var locations = await fetch(fileName)
+      .then(r => r.json())
+    // var content = fs.readFileSync(fileName);
+    // var locations = JSON.parse(content)
+    log("parseLocationNames", locations.length);
+    locations = locations.filter((a, i) => i != 0)
+    log("parseLocationNames", locations.length);
+
+    var run = location => {
+      log("parseLocationNames", location.description);
+      log("parseLocationNames", location.boundingPoly);
+
+      // var middle = center(location.boundingPoly.vertices.map(p => [p.x, p.y]))
+      var l = location.boundingPoly.vertices[0]
+      log("parseLocationNames", l);
+      return [l.x, l.y]
+
+    }
+    var altdorf = {
+      raw: run(locations.find(l => l.description.toLowerCase().includes("altdorf"))),
+      map: [31.874268441160677, -16.277407946030955]
+    }
+
+    var talabheim = {
+      raw: run(locations.find(l => l.description.toLowerCase().includes("talabheim"))),
+      map: [35.692076013481106, -0.5703095462174956]
+    }
+
+
+
+
+
+    var undoZero = loc => {
+      var offset = [31.874268441160677, -16.277407946030955]
+      var offset = [0, -0]
+      return [loc[0] + offset[0], loc[1] + offset[1]]
+    }
+
+
+
+    var findZeroMapLocation = loc => {
+      var offset = [-31.874268441160677, 16.277407946030955]
+      return [loc[0] + offset[0], loc[1] + offset[1]]
+    }
+
+
+    var findZeroRawLocation = loc => {
+      var offset = [-1360, -2434]
+      return [loc[0] + offset[0], loc[1] + offset[1]]
+    }
+
+
+    var rawToMapPropOffset = (raw, map) => {
+      // var offset = [0.002721174321, 0]
+      return [map[0] / raw[0], map[1] / raw[1]]
+    }
+
+    var recalculateLocationOfRaw = (raw, offset) => {
+      return [raw[0] * offset[0], raw[1] * offset[1]]
+    }
+
+    altdorf = {
+      ...altdorf,
+      findZeroMapLocation: findZeroMapLocation(altdorf.map),
+      findZeroRawLocation: findZeroRawLocation(altdorf.raw),
+      rawToMapPropOffset: rawToMapPropOffset(altdorf.raw, altdorf.map, )
+
+    }
+    altdorf.recalculateLocationOfRaw = recalculateLocationOfRaw(altdorf.raw, altdorf.rawToMapPropOffset)
+
+    talabheim = {
+      ...talabheim,
+      findZeroMapLocation: findZeroMapLocation(talabheim.map),
+      findZeroRawLocation: findZeroRawLocation(talabheim.raw),
+      rawToMapPropOffset: rawToMapPropOffset(talabheim.raw, talabheim.map, )
+
+    }
+    talabheim.recalculateLocationOfRaw = recalculateLocationOfRaw(talabheim.raw, talabheim.rawToMapPropOffset)
+
+
+
+
+
+    // 0.002721174321
+
+
+    log("parseLocationNames", "findZeroMapLocation", "altdorf", altdorf.findZeroMapLocation);
+    log("parseLocationNames", "findZeroRawLocation", "altdorf", altdorf.findZeroRawLocation);
+    log("parseLocationNames", "rawToMapPropOffset", "altdorf", altdorf.rawToMapPropOffset);
+    log("parseLocationNames", "predict", "altdorf", altdorf.recalculateLocationOfRaw);
+    // altdorf.recalculateLocationOfRaw
+
+
+
+
+
+
+    log("parseLocationNames", "findZeroMapLocation", "talabheim", talabheim.findZeroMapLocation);
+    log("parseLocationNames", "findZeroRawLocation", "talabheim", talabheim.findZeroRawLocation);
+    log("parseLocationNames", "rawToMapPropOffset", "talabheim", talabheim.rawToMapPropOffset);
+    log("parseLocationNames", "predict", "talabheim", talabheim.recalculateLocationOfRaw);
+    // talabheim.recalculateLocationOfRaw
+
+    
+
+
+
+
+
+    const average = arr => arr.reduce((p, c) => p + c, 0) / arr.length;
+
+    var caluateAverageOffset = (a, b) => {
+      return [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]
+    }
+
+
+
+
+    var masterRecalculate = loc => {
+      // var offset = [0.018177416262329583, -0.003485554268180884] //master offset
+      var offset = [0.012917870435570434, -0.00028359500060541804]
+
+      (50.680797145321655, -29.32968139031974)
+
+      return [loc[0] * offset[0], loc[1] * offset[1]]
+
+    }
+
+
+    log("parseLocationNames", "masterRecalculate", "altdorf", masterRecalculate(altdorf.raw));
+
+    log("parseLocationNames", "masterRecalculate", "talabheim", masterRecalculate(talabheim.raw));
+
+mapFunctions.markers.clearMarkers()
+
+
+    mapFunctions.markers.placeMarker({position: new google.maps.LatLng(...masterRecalculate(altdorf.raw))})
+
+    mapFunctions.markers.placeMarker({
+      position: new google.maps.LatLng(...masterRecalculate(talabheim.raw))
+    })
+
+
+
+    log("parseLocationNames", "average offset", "both", caluateAverageOffset(altdorf.rawToMapPropOffset, talabheim.rawToMapPropOffset));
+
+
+
+
+    mapFunctions.markers.placeMarker({data:{inputContent:"Nuln"},position: new google.maps.LatLng(...masterRecalculate(run(locations.find(l => l.description.toLowerCase().includes("Nuln".toLowerCase())))))})
+    mapFunctions.markers.placeMarker({data:{inputContent:"Helmgart"},position: new google.maps.LatLng(...masterRecalculate(run(locations.find(l => l.description.toLowerCase().includes("Helmgart".toLowerCase())))))})
+
+
+
+
+
+  }
+
+
+  parseLocationNames('./map/mapreader/foundImages_5120_empire_bw3.json')
+
+
+
+  // ############ get place names ###############
+
+
 
 }
 
