@@ -91,6 +91,12 @@ window.initMap = async function() {
   }
 
 
+
+
+
+
+
+
   /*
 
   control zoom
@@ -127,16 +133,29 @@ window.initMap = async function() {
 
   // var handlers = map.handlers
   map.handlers.defaults = {
-    maxViewHistory: 20
+    maxViewHistory: 20,
+    lineStyles: {
+      strokeColor: 'blue',
+      strokeOpacity: 0,
+
+      icons: [{
+        icon: {
+          path: "M 0,-1 0,1",
+          strokeOpacity: 1,
+          scale: 4,
+        },
+        offset: "0",
+        repeat: "20px",
+      }, ],
+    }
   }
 
   map.handlers.memory = {
     save: (name, value) => localStorage.setItem(name, value),
     load: (name) => {
-      var trx = localStorage.getItem(name)
+      var rawMemory = localStorage.getItem(name)
       try {
-        var m = JSON.parse(trx);
-        console.log(trx, m);
+        var m = JSON.parse(rawMemory);
         return m
       } catch (e) {
         return undefined
@@ -194,47 +213,327 @@ window.initMap = async function() {
 
 
   map.handlers.markers = {
+    markers: [],
     init: function(map) {
-      console.info(name());
+
+      console.info("markers", name());
       this.map = map
 
+
       return this
+    },
+    saveMarkersToMemory: function() {
+      var mem = this.markers.map(marker => marker.export())
+      console.log(name(), mem.length);
+      this.map.handlers.memory.save("markers", JSON.stringify(mem))
+    },
+
+    loadMarkersFromMemory: function() {
+      var mem = this.map.handlers.memory.load("markers")
+      console.log(name(), mem);
+      if (mem && mem.length > 0) mem
+        .map(marker => this.createMarker({
+          ...marker,
+          imported: true
+        }))
+      // .map(marker => this.deleteMarker(marker))
+    },
+    deleteMarker: function(marker) {
+      console.info(name());
+
+      var target = this.markers.find(m => m === marker || (JSON.stringify(m.export()) == JSON.stringify(marker.export())) || m.data.id == marker.data.id)
+      this.markers = this.markers
+        .filter(m => target != m)
+      target.setMap(null)
+      this.saveMarkersToMemory()
+      return this.markers
+    },
+    deleteAllMarkers: function() {
+      return this.markers
+        .map(marker => this.deleteMarker(marker))
+    },
+    createMarker: function(info) {
+      console.info(name());
+      if (!info.position) return
+
+      // make marker
+      var marker = new google.maps.Marker({
+        ...info,
+        position: info.position,
+        map: this.map,
+        data: info.data || {
+          id: Math.random().toString(36).substring(7)
+        },
+        export: function() {
+          return {
+            position: this.getPosition().toJSON(),
+            data: this.data,
+          }
+        },
+      });
+
+      // set up the needed events to make markers usable
+      google.maps.event.addListener(marker, "contextmenu", (e) => {
+        if (!marker.getDraggable()) return;
+        if (e.domEvent.altKey) this.deleteMarker(marker)
+
+      })
+
+      google.maps.event.addListener(marker, "mouseup", (e) => {
+        this.saveMarkersToMemory()
+      })
+
+      this.markers.push(marker)
+      this.saveMarkersToMemory()
+      return marker
     },
 
 
   }
 
+
+
+
   var markers = map.handlers.markers.init(map)
-
-
-
-
-
-
-
-
-  // saveView: function() {
-  //   log("zoom", name())
-  //   localStorage.setItem('center', JSON.stringify(map.getCenter().toJSON()))
-  //   localStorage.setItem('zoom', map.getZoom())
-  //   // log("zoom",name(), map.getZoom(), JSON.stringify(map.getCenter().toJSON()))
-  //   // log("zoom",name(),)
+  markers.loadMarkersFromMemory()
+  markers.markers.map(m=>m.setDraggable(true))
+  // markers.deleteAllMarkers()
   //
-  // },
-  // loadView: function(map) {
-  //   log("zoom", name())
-  //   var center = localStorage.getItem('center');
-  //   var zoom = localStorage.getItem('zoom');
-  //   if (center || zoom) return
+  // Array.from(new Array(10))
+  //   .forEach((e, i) => markers.createMarker({
+  //     position: {
+  //       lng: 1 * (i / 1),
+  //       lat: 1 * (i / 1)
+  //     }
+  //   }))
   //
-  //   // log("old",center, zoom);
-  //   map.setCenter(JSON.parse(center));
-  //   map.setZoom(Number(zoom));
-  // },
+
+
+  map.handlers.lines = {
+    lines: [],
+    init: function(map) {
+
+      console.info("lines", name());
+      this.map = map
+
+
+      return this
+    },
+
+    saveLinesToMemory: function() {
+      var mem = this.lines.map(line => line.export()).filter(r => r)
+      console.info(name(), mem.length);
+      this.map.handlers.memory.save("lines", JSON.stringify(mem))
+    },
+
+    loadLinesFromMemory: function() {
+      var mem = this.map.handlers.memory.load("lines")
+      console.info(name(), mem);
+      if (mem && mem.length > 0) mem
+        .map(line => this.createLine({
+          ...line,
+          imported: true
+        }))
+      // .map(line => this.deleteLine(line))
+    },
+    deleteLine: function(line) {
+      console.info(name());
+      var target = this.lines.find(m => m === line || (JSON.stringify(m.export()) == JSON.stringify(line.export())) || m.data.id == line.data.id)
+      this.lines = this.lines
+        .filter(l => target != l)
+      target.setMap(null)
+      this.saveLinesToMemory()
+      return this.lines
+    },
+    deleteAllLines: function() {
+      return this.lines
+        .map(line => this.deleteLine(line))
+    },
+    createLine: function(info) {
+      console.info(name(), info);
+      if (!info.path) return
+
+      // make line
+      var line = new google.maps.Polyline({
+        ...info,
+        path: info.path,
+        map: this.map,
+        data: info.data || {
+          id: Math.random().toString(36).substring(7)
+        },
+        export: function() {
+          if (this.getPath().getArray().length < 2) return undefined
+          return {
+            path: this.getPath().getArray(),
+            data: this.data,
+            strokeColor: this.strokeColor,
+            strokeOpacity: this.strokeOpacity,
+            icons: this.icons,
+          }
+        },
+      });
+
+
+
+      // set up the needed events to make lines usable
+      google.maps.event.addListener(line, "contextmenu", (e) => {
+        if (e.vertex == undefined) return;
+        if (!line.editable) return;
+        var path = line.getPath();
+        path.removeAt(e.vertex);
+        this.saveLinesToMemory()
+        if (path.length < 2) this.deleteLine(line)
+        if (e.domEvent.altKey) this.deleteLine(line)
+
+      })
+
+      google.maps.event.addListener(line, "mouseup", (e) => {
+        this.saveLinesToMemory()
+      })
+
+      this.lines.push(line)
+      this.saveLinesToMemory()
+
+
+
+
+
+      return line
+    },
+  }
+
+
+  var lines = map.handlers.lines.init(map)
+  lines.loadLinesFromMemory()
+  // lines.deleteAllLines()
+
+
+  // lines.createLine({
+  //
+  //
+  //   strokeColor: 'blue',
+  //   strokeOpacity: 0,
+  //
+  //   icons: [{
+  //     icon: {
+  //       path: "M 0,-1 0,1",
+  //       strokeOpacity: 1,
+  //       scale: 4,
+  //     },
+  //     offset: "0",
+  //     repeat: "20px",
+  //   }, ],
+  //
+  //
+  //   path: Array.from(new Array(20)).map((e, i) => ({
+  //     lng: (i + 1) / -10,
+  //     lat: (i + 1) / -10,
+  //   }))
+  // })
+
+  lines.lines
+    .map(line => line.setEditable(true))
+
+
+
+
+
+  map.handlers.controls = {
+    init: function(map, markers, lines) {
+
+      console.info("controls", name());
+      this.map = map
+      this.controlDIV = document.querySelector("#controls")
+      this.markers = markers
+      this.lines = lines
+
+      this.drawingManager = new google.maps.drawing.DrawingManager({
+        drawingMode: null,
+        drawingControl: true,
+        drawingControlOptions: {
+          position: google.maps.ControlPosition.TOP_CENTER,
+          drawingModes: [
+            google.maps.drawing.OverlayType.MARKER,
+            // google.maps.drawing.OverlayType.CIRCLE,
+            // google.maps.drawing.OverlayType.POLYGON,
+            google.maps.drawing.OverlayType.POLYLINE,
+            // google.maps.drawing.OverlayType.RECTANGLE,
+          ],
+        },
+        markerOptions: {
+          icon: "https://developers.google.com/maps/documentation/javascript/examples/full/images/beachflag.png",
+        },
+        // polylineOptions: this.map.handlers.defaults.lineStyles,
+      });
+
+      console.log(this.drawingManager);
+      this.drawingManager.setMap(map);
+
+      google.maps.event.addListener(this.drawingManager, 'markercomplete', (marker) => {
+        // make a marker
+        this.markers.createMarker({
+          position: marker.position,
+        });
+        // delete the one placed bby the controller
+        marker.setMap(null)
+      });
+
+      google.maps.event.addListener(this.drawingManager, 'polylinecomplete', (line) => {
+        // create a line
+        this.lines.createLine({
+          path: line.getPath().getArray(),
+          ...this.map.handlers.defaults.lineStyles
+        })
+        // delete the one placed bby the controller
+        line.setMap(null)
+
+      });
+      // });
+
+      google.maps.event.addListener(this.drawingManager, "drawingmode_changed", (event) => {
+        console.log("drawing mode changed:" + this.drawingManager.getDrawingMode());
+      })
+
+
+
+
+
+
+
+
+      return this
+    },
+  }
+
+
+  map.handlers.controls.init(map, markers, lines)
+
 
 
   return
   return
+
+
+
+  //
+
+  //
+
+  //
+
+  //
+
+  //
+
+  //
+
+  //
+
+  //
+
+  //
+
+  //
 
 
   var states = await fetch("./data/states.json")
