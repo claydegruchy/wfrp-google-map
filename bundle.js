@@ -21,8 +21,6 @@ window.initMap = async function() {
 
 
 
-
-
   const map = new google.maps.Map(document.getElementById("map"), {
     center: {
       // altdorf
@@ -34,12 +32,21 @@ window.initMap = async function() {
     mapTypeControlOptions: {
       mapTypeIds: ["WFRP"],
     },
+    restriction: {
+      latLngBounds: {
+        north: 80,
+        south: -80,
+        west: -300,
+        east: 300,
+      },
+    },
+
     gestureHandling: 'greedy'
   });
 
 
 
-  const wfrpMapType = new google.maps.ImageMapType({
+  const mapOptions = {
     getTileUrl: function(coord, zoom) {
       const normalizedCoord = getNormalizedCoord(coord, zoom);
 
@@ -61,7 +68,9 @@ window.initMap = async function() {
     minZoom: 3,
     // radius: 10000,
     name: "WFRP",
-  });
+  }
+
+  const wfrpMapType = new google.maps.ImageMapType(mapOptions);
   map.mapTypes.set("WFRP", wfrpMapType);
   map.setMapTypeId("WFRP");
 
@@ -134,7 +143,6 @@ window.initMap = async function() {
 
   // var handlers = map.handlers
   map.handlers.defaults = {
-    maxViewHistory: 20,
     lineStyles: {
       strokeColor: 'blue',
       strokeOpacity: 0,
@@ -166,6 +174,10 @@ window.initMap = async function() {
 
 
   map.handlers.view = {
+    defaults: {
+      maxViewHistory: 20,
+
+    },
     viewHistory: [],
     init: function(map) {
       console.info("view", name());
@@ -188,12 +200,15 @@ window.initMap = async function() {
 
     loadViewFromMemory: function() {
       console.info(name());
-      this.setView(this.map.handlers.memory.load("center"), this.map.handlers.memory.load("zoom"))
+      var view = [this.map.handlers.memory.load("center"), this.map.handlers.memory.load("zoom")]
+      this.setView(...view)
+      return view
+
     },
     updateView: function() {
-      console.info(name());
       var zoom = this.map.getZoom()
       var position = this.map.getCenter().toJSON()
+      console.info(name(), position, zoom);
       this.map.handlers.memory.save("center", JSON.stringify(position))
       this.map.handlers.memory.save("zoom", zoom)
       // update histroy
@@ -201,8 +216,8 @@ window.initMap = async function() {
         zoom,
         position
       })
-      if (this.viewHistory.length > this.map.handlers.defaults.maxViewHistory) {
-        this.viewHistory = this.viewHistory.slice(-this.map.handlers.defaults.maxViewHistory)
+      if (this.viewHistory.length > this.defaults.maxViewHistory) {
+        this.viewHistory = this.viewHistory.slice(-this.defaults.maxViewHistory)
       }
     },
   }
@@ -213,20 +228,27 @@ window.initMap = async function() {
 
 
 
+
   map.handlers.markers = {
     markers: [],
     init: function(map) {
 
       console.info("markers", name());
       this.map = map
-
+      this.cluster = new MarkerClusterer(this.map, this.markers, {
+        imagePath: "https://unpkg.com/@googlemaps/markerclustererplus@1.0.3/images/m",
+        maxZoom: mapOptions.maxZoom - 1,
+      });
 
       return this
     },
     saveMarkersToMemory: function() {
+      this.cluster.clearMarkers()
       var mem = this.markers.map(marker => marker.export())
       console.log(name(), mem.length);
       this.map.handlers.memory.save("markers", JSON.stringify(mem))
+      this.cluster.addMarkers(this.markers)
+
     },
 
     loadMarkersFromMemory: function() {
@@ -237,7 +259,6 @@ window.initMap = async function() {
           ...marker,
           imported: true
         }))
-      // .map(marker => this.deleteMarker(marker))
     },
     deleteMarker: function(marker) {
       console.info(name());
@@ -253,6 +274,7 @@ window.initMap = async function() {
       return this.markers
         .map(marker => this.deleteMarker(marker))
     },
+
     createMarker: function(info) {
       console.info(name());
       if (!info.position) return
@@ -297,7 +319,7 @@ window.initMap = async function() {
 
   var markers = map.handlers.markers.init(map)
   markers.loadMarkersFromMemory()
-  markers.markers.map(m=>m.setDraggable(true))
+  // markers.markers.map(m => m.setDraggable(true))
   // markers.deleteAllMarkers()
   //
   // Array.from(new Array(10))
@@ -440,7 +462,7 @@ window.initMap = async function() {
 
 
   map.handlers.controls = {
-    init: function(map, markers, lines) {
+    init: async function(map, markers, lines) {
 
       console.info("controls", name());
       this.map = map
@@ -448,7 +470,7 @@ window.initMap = async function() {
       this.markers = markers
       this.lines = lines
 
-      this.drawingManager = new google.maps.drawing.DrawingManager({
+      this.drawingManager = await new google.maps.drawing.DrawingManager({
         drawingMode: null,
         drawingControl: true,
         drawingControlOptions: {
@@ -467,8 +489,18 @@ window.initMap = async function() {
         // polylineOptions: this.map.handlers.defaults.lineStyles,
       });
 
-      console.log(this.drawingManager);
       this.drawingManager.setMap(map);
+      this.addListeners()
+      await this.loadNav()
+
+      for (let [n, fn] of Object.entries(this.menus)) {
+        console.log("activating sidebar menu controller:", n);
+        await fn(this)
+      }
+
+      return await this
+    },
+    addListeners: function() {
 
       google.maps.event.addListener(this.drawingManager, 'markercomplete', (marker) => {
         // make a marker
@@ -489,21 +521,112 @@ window.initMap = async function() {
         line.setMap(null)
 
       });
-      // });
 
       google.maps.event.addListener(this.drawingManager, "drawingmode_changed", (event) => {
         console.log("drawing mode changed:" + this.drawingManager.getDrawingMode());
       })
 
-
-
-
-
-
-
-
-      return this
     },
+    loadNav: async function() {
+      this.controlDIV.innerHTML = "Loading..."
+
+      await fetch("./templates/base.hbs")
+        .then(r => r.text())
+        .then(r => Handlebars.compile(r))
+        .then(r => r({
+          setting: "ok"
+        }))
+        .then(r => this.controlDIV.innerHTML = r)
+
+      return this.controlDIV
+
+    },
+    menus: {
+      hand: async function(parent) {
+
+        // get the template
+        var markerSelectionTemplate = await fetch("./templates/markerSelection.hbs")
+          .then(r => r.text())
+          .then(r => Handlebars.compile(r))
+
+
+
+
+        var selectMarker = marker => {
+          // parent.markers.markers = parent.markers.markers
+          parent.controlDIV.querySelector(".content").innerHTML = markerSelectionTemplate(marker)
+
+        }
+        selectMarker()
+
+        this.handMarkerListeners = []
+
+        google.maps.event.addListener(parent.drawingManager, "drawingmode_changed", (event) => {
+          if (parent.drawingManager.getDrawingMode()) {
+            // if we're not in hand mode anymore, remove the liseners
+            console.info("removing listeners");
+            this.handMarkerListeners.forEach(l => google.maps.event.removeListener(l))
+            return
+          }
+
+          console.info("activating the hand", parent.markers.markers);
+          for (var marker of parent.markers.markers) {
+            //add listeners, when activated, add this markers details to the ui
+            var t = google.maps.event.addListener(marker, "mouseup", (e) => {
+              selectMarker(marker)
+            });
+            this.handMarkerListeners.push(t)
+
+          }
+        })
+
+
+        parent.drawingManager.setDrawingMode(null)
+
+
+
+
+
+
+        // console.log(await div);
+        // draw the side panel
+        // hover over marker
+        // select marker
+
+      }
+      /*
+
+      hand:
+      if read only:
+        show info of POI when they are "selected"
+        show hovers with breif desc
+        all items static
+      if edit mode:
+        show hovers with breif desc
+        show info of POI when they are "selected", allow edits
+        allow movement, deletes of all items
+
+      marker:
+      does not show in read only
+      select icon (optional)
+
+      line:
+      does not show in read only
+      select line colour
+      select line dots
+
+
+
+      types of menu:
+      selection menu of what kind of marker to place
+      selection menu of what kind of line to place
+
+      placing a point of interest that does not need a lot of text
+      hover info
+      placing a campaign champter that needs a lot of text
+
+      */
+    }
   }
 
 
