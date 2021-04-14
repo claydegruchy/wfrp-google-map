@@ -139,6 +139,13 @@ window.initMap = async function() {
 
   */
 
+
+  var randomString = function() {
+    var str = Math.random().toString(36).substring(7)
+    return str
+  }
+
+
   map.handlers = {}
 
   // var handlers = map.handlers
@@ -279,13 +286,15 @@ window.initMap = async function() {
       console.info(name());
       if (!info.position) return
 
+
+
       // make marker
       var marker = new google.maps.Marker({
         ...info,
         position: info.position,
         map: this.map,
         data: info.data || {
-          id: Math.random().toString(36).substring(7)
+          id: randomString()
         },
         export: function() {
           return {
@@ -319,7 +328,7 @@ window.initMap = async function() {
 
   var markers = map.handlers.markers.init(map)
   markers.loadMarkersFromMemory()
-  // markers.markers.map(m => m.setDraggable(true))
+  markers.markers.map(m => m.setDraggable(true))
   // markers.deleteAllMarkers()
   //
   // Array.from(new Array(10))
@@ -382,7 +391,7 @@ window.initMap = async function() {
         path: info.path,
         map: this.map,
         data: info.data || {
-          id: Math.random().toString(36).substring(7)
+          id: randomString()
         },
         export: function() {
           if (this.getPath().getArray().length < 2) return undefined
@@ -552,12 +561,12 @@ window.initMap = async function() {
 
 
 
-        var selectMarker = marker => {
+        var selectMarker = m => {
           // parent.markers.markers = parent.markers.markers
-          parent.controlDIV.querySelector(".content").innerHTML = markerSelectionTemplate(marker)
+          console.log("running select", m.data.id);
+          parent.controlDIV.querySelector(".content").innerHTML = markerSelectionTemplate(m)
 
         }
-        selectMarker()
 
         this.handMarkerListeners = []
 
@@ -571,8 +580,11 @@ window.initMap = async function() {
 
           console.info("activating the hand", parent.markers.markers);
           for (var marker of parent.markers.markers) {
+            console.log("adding listener for", marker.data.id);
             //add listeners, when activated, add this markers details to the ui
-            var t = google.maps.event.addListener(marker, "mouseup", (e) => {
+            var t = marker.addListener("mouseup", (e) => {
+              // fixme this is wack shit
+              // cant see to find out why this listener only returns one of the entries  int he list
               selectMarker(marker)
             });
             this.handMarkerListeners.push(t)
@@ -580,7 +592,7 @@ window.initMap = async function() {
           }
         })
 
-
+// set to hand initally 
         parent.drawingManager.setDrawingMode(null)
 
 
