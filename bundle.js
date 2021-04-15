@@ -13,6 +13,16 @@ window.initMap = async function() {
     return arguments.callee.caller.name
   }
 
+  function debounce(func, timeout = 300) {
+    let timer;
+    return (...args) => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        func.apply(this, args);
+      }, timeout);
+    };
+  }
+
   // load params
   var rawParams = new URLSearchParams(window.location.search)
   var params = Object.fromEntries(
@@ -191,7 +201,7 @@ window.initMap = async function() {
       map.addListener('zoom_changed', () => this.updateView());
       map.addListener('center_changed', () => this.updateView());
       this.map = map
-
+      //
       return this
     },
     setView: function(position, zoom) {
@@ -215,7 +225,7 @@ window.initMap = async function() {
     updateView: function() {
       var zoom = this.map.getZoom()
       var position = this.map.getCenter().toJSON()
-      console.info(name(), position, zoom);
+      // console.info(name(), position, zoom);
       this.map.handlers.memory.save("center", JSON.stringify(position))
       this.map.handlers.memory.save("zoom", zoom)
       // update histroy
@@ -238,6 +248,7 @@ window.initMap = async function() {
 
   map.handlers.markers = {
     markers: [],
+    // to prevent save flooding
     init: function(map) {
 
       console.info("markers", name());
@@ -247,15 +258,21 @@ window.initMap = async function() {
         maxZoom: mapOptions.maxZoom - 1,
       });
 
-      return this
-    },
-    saveMarkersToMemory: function() {
-      this.cluster.clearMarkers()
-      var mem = this.markers.map(marker => marker.export())
-      console.log(name(), mem.length);
-      this.map.handlers.memory.save("markers", JSON.stringify(mem))
-      this.cluster.addMarkers(this.markers)
+      // added saving behind this shock adsorber to prevent flooding
+      this.saveMarkersToMemory = debounce(() => {
+        // compare old and new  mem to make sure we're not saving something uselessly
+        var oldMem = this.map.handlers.memory.load("markers")
+        var mem = this.markers.map(marker => marker.export())
+        if (JSON.stringify(oldMem) != JSON.stringify(mem)) {
+          this.cluster.clearMarkers()
+          console.log("saved", mem.length);
+          this.map.handlers.memory.save("markers", JSON.stringify(mem))
+          this.cluster.addMarkers(this.markers)
 
+        }
+      }, 500)
+
+      return this
     },
 
     loadMarkersFromMemory: function() {
@@ -266,6 +283,7 @@ window.initMap = async function() {
           ...marker,
           imported: true
         }))
+      this.cluster.addMarkers(this.markers)
     },
     deleteMarker: function(marker) {
       console.info(name());
@@ -328,7 +346,7 @@ window.initMap = async function() {
 
   var markers = map.handlers.markers.init(map)
   markers.loadMarkersFromMemory()
-  markers.markers.map(m => m.setDraggable(true))
+  // markers.markers.map(m => m.setDraggable(true))
   // markers.deleteAllMarkers()
   //
   // Array.from(new Array(10))
@@ -558,14 +576,56 @@ window.initMap = async function() {
           .then(r => r.text())
           .then(r => Handlebars.compile(r))
 
+        var markerHoverTemplate = await fetch("./templates/markerHover.hbs")
+          .then(r => r.text())
+          .then(r => Handlebars.compile(r))
 
 
 
-        var selectMarker = m => {
-          // parent.markers.markers = parent.markers.markers
-          console.log("running select", m.data.id);
-          parent.controlDIV.querySelector(".content").innerHTML = markerSelectionTemplate(m)
+        var keyInput = (event, marker) => {
+          if (event.target.dataset.id != marker.data.id) throw "how did we not match?"
+          marker.data[event.target.name] = event.target.value
+          parent.markers.saveMarkersToMemory()
+        }
 
+
+        var deselect = () => {
+          parent.markers.markers.forEach(mm => mm.setAnimation(null))
+          parent.controlDIV.querySelector(".content").innerHTML = ""
+
+        }
+
+
+        var selectMarker = marker => {
+          // deselect all
+          deselect()
+          // set animation
+          marker.setAnimation(google.maps.Animation.BOUNCE);
+
+          var container = parent.controlDIV.querySelector(".content")
+          container.innerHTML = markerSelectionTemplate(marker)
+          var inputs = [...container.querySelectorAll(".input")]
+          // add event listeners to each  of the inputs
+          inputs.forEach(input => input.addEventListener('keyup', e => keyInput(e, marker)))
+
+        }
+
+        var dehover = () => {
+          parent.markers.markers.forEach(mm => {
+            if (!mm.infowindow) return
+            mm.infowindow.close()
+            mm.infowindow = undefined
+          })
+
+        }
+
+        var hoverMarker = marker => {
+          var content = markerHoverTemplate(marker)
+          if (!content || content == "") return
+          marker.infowindow = new google.maps.InfoWindow({
+            content
+          });
+          marker.infowindow.open(parent.map, marker)
         }
 
         this.handMarkerListeners = []
@@ -579,20 +639,27 @@ window.initMap = async function() {
           }
 
           console.info("activating the hand", parent.markers.markers);
-          for (var marker of parent.markers.markers) {
+
+          parent.markers.markers.forEach(marker => {
             console.log("adding listener for", marker.data.id);
             //add listeners, when activated, add this markers details to the ui
-            var t = marker.addListener("mouseup", (e) => {
-              // fixme this is wack shit
-              // cant see to find out why this listener only returns one of the entries  int he list
-              selectMarker(marker)
-            });
+            var t = marker.addListener("mouseup", (e) => selectMarker(marker));
+            marker.addListener("mouseover", (e) => hoverMarker(marker));
+            marker.addListener("mouseout", (e) => dehover());
+
+
             this.handMarkerListeners.push(t)
 
-          }
+          })
+          google.maps.event.addListener(parent.map, "contextmenu", (event) => {
+            dehover()
+            deselect()
+          });
+
+
         })
 
-// set to hand initally 
+        // set to hand initally
         parent.drawingManager.setDrawingMode(null)
 
 
