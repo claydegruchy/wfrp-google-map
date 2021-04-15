@@ -1,1 +1,8 @@
-<h3>{{data.title}}</h3>
+{{#if data.title}}
+  <h3>{{data.title}}</h3>
+{{else}}
+  <p>
+    { lng:{{position.lng}},lat:{{position.lat}} }
+  </p>
+  {{data.tags}}
+{{/if}}
