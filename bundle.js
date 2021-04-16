@@ -770,10 +770,10 @@ window.initMap = async function() {
           // in LatLngs and convert them to pixel coordinates.
           // We'll use these coordinates to resize the div.
           const sw = overlayProjection.fromLatLngToDivPixel(
-            this.bounds_.getSouthWest()
+            this.bounds_.getSouthEast()
           );
           const ne = overlayProjection.fromLatLngToDivPixel(
-            this.bounds_.getNorthEast()
+            this.bounds_.getNorthWest()
           );
 
           // Resize the image's div to fit the indicated dimensions.
@@ -815,8 +815,8 @@ window.initMap = async function() {
           // SW coordinates - (x1, y2)
 
           console.log({
-            getNorthEast: rectangle.getBounds().getNorthEast().toJSON(),
-            getSouthWest: rectangle.getBounds().getSouthWest().toJSON(),
+            getNorthWest: rectangle.getBounds().getNorthWest().toJSON(),
+            getSouthEast: rectangle.getBounds().getSouthEast().toJSON(),
           });
         });
 
@@ -853,21 +853,42 @@ window.initMap = async function() {
   locations = locations.filter((a, i) => i != 0)
   // console.log("parseLocationNames", locations.length);
 
-  var run = location => {
-    if (!location) return
-    // console.log("parseLocationNames", location.description);
-
-    var l = location.boundingPoly.vertices[0]
-    return {
-      x: l.x,
-      y: l.y,
-    }
-
-  }
   var makeLatLng = a => ({
     lat: a[0],
     lng: a[1]
   })
+
+
+  var run = location => {
+
+    var center = function(arr) {
+      var x = arr.map(function(a) {
+        return a[0]
+      });
+      var y = arr.map(function(a) {
+        return a[1]
+      });
+      var minX = Math.min.apply(null, x);
+      var maxX = Math.max.apply(null, x);
+      var minY = Math.min.apply(null, y);
+      var maxY = Math.max.apply(null, y);
+      return [(minX + maxX) / 2, (minY + maxY) / 2];
+    }
+
+
+    if (!location) return
+
+    var l = center(location.boundingPoly.vertices.map(v => [v.x, v.y]))
+
+    // console.log("parseLocationNames", location.description);
+
+    return {
+      x: l[0],
+      y: l[1],
+    }
+
+  }
+
 
 
   var addLatLng = (a, b) => ({
@@ -980,11 +1001,11 @@ window.initMap = async function() {
 
 
   var rawOrigin = {
-    getNorthEast: {
+    getNorthWest: {
       lat: 51.61577247781892,
       lng: -24.50441987718352
     },
-    getSouthWest: {
+    getSouthEast: {
       lat: 4.244208080077743,
       lng: 31.7345937946915
     }
@@ -994,8 +1015,8 @@ window.initMap = async function() {
 
 
 
-  console.log("absolte lat", rawOrigin.getNorthEast.lat + rawOrigin.getSouthWest.lat);
-  console.log("absolte lng", rawOrigin.getNorthEast.lng + -rawOrigin.getSouthWest.lng);
+  console.log("absolte lat", rawOrigin.getNorthWest.lat + rawOrigin.getSouthEast.lat);
+  console.log("absolte lng", rawOrigin.getNorthWest.lng + -rawOrigin.getSouthEast.lng);
 
   var maxLat = 55.85998055789666
   var maxLng = 56.239013671875014
@@ -1021,14 +1042,14 @@ window.initMap = async function() {
 
   var applyOffset = a => addLatLng(a, {
 
-    lat: rawOrigin.getNorthEast.lat,
-    lng: rawOrigin.getNorthEast.lng,
+    lat: rawOrigin.getNorthWest.lat,
+    lng: rawOrigin.getNorthWest.lng,
 
   })
   var removeOffset = a => addLatLng(a, {
 
-    lat: -rawOrigin.getNorthEast.lat,
-    lng: -rawOrigin.getNorthEast.lng,
+    lat: -rawOrigin.getNorthWest.lat,
+    lng: -rawOrigin.getNorthWest.lng,
 
   })
   var multiplier = 1
@@ -1084,6 +1105,8 @@ window.initMap = async function() {
 
   var crossmap = (name) => {
 
+
+
     var raw = run(locations.find(l => l.description.toLowerCase().includes(name)))
     if (!raw) return
 
@@ -1096,16 +1119,19 @@ window.initMap = async function() {
     var YMax = indexLocation.boundingPoly.vertices[2].y
 
 
+
     // console.log(x, XMax, x / XMax, "%");
     // console.log(y, YMax, y / YMax, "%");
 
     var rawMapToMapBounds = rawOrigin
     // console.log(rawMapToMapBounds);
 
-    var lngDistance = Math.abs(rawMapToMapBounds.getNorthEast.lng) + Math.abs(rawMapToMapBounds.getSouthWest.lng)
-    var latDistance = Math.abs(rawMapToMapBounds.getNorthEast.lat) + Math.abs(rawMapToMapBounds.getSouthWest.lat)
+    var lngDistance = Math.abs(rawMapToMapBounds.getNorthWest.lng) + Math.abs(rawMapToMapBounds.getSouthEast.lng)
+    var latDistance = Math.abs(rawMapToMapBounds.getNorthWest.lat) + Math.abs(rawMapToMapBounds.getSouthEast.lat)
     // console.log(lngDistance);
     // console.log(latDistance);
+
+
 
     var mappedXToLngPercent = (x / XMax) * lngDistance
     var mappedYToLatPercent = (y / YMax) * latDistance
@@ -1116,15 +1142,17 @@ window.initMap = async function() {
 
 
 
-    // console.log(name," rawMapToMapBounds.getNorthEast.lng + mappedXToLngPercent", mappedXToLngPercent);
-    console.log(name, mappedYToLatPercent, (latDistance / 2));
+    // console.log(name," rawMapToMapBounds.getNorthWest.lng + mappedXToLngPercent", mappedXToLngPercent);
+    console.log(name, mappedYToLatPercent, (latDistance / 2), ((latDistance / 2) - (mappedYToLatPercent)), (y / YMax));
 
 
 
 
     var calc = {
-      lng: (rawMapToMapBounds.getNorthEast.lng + mappedXToLngPercent - 6.8),
-      lat: (rawMapToMapBounds.getNorthEast.lat + -mappedYToLatPercent + 7) - ((latDistance / 2) - (mappedYToLatPercent)) / 5,
+      lng: rawMapToMapBounds.getNorthWest.lng + (mappedXToLngPercent - 6.9),
+      // lat: rawMapToMapBounds.getNorthWest.lat + (((-mappedYToLatPercent + 7) - ((latDistance / 2) - (mappedYToLatPercent)) / 5)),
+      // lat: rawMapToMapBounds.getNorthWest.lat + (((-mappedYToLatPercent + 7) - ((latDistance / 2) - (mappedYToLatPercent)) / 5)),
+      lat: rawMapToMapBounds.getNorthWest.lat + (-mappedYToLatPercent),
     }
 
     // console.log("calc", calc);
@@ -1134,7 +1162,7 @@ window.initMap = async function() {
 
 
 
-    // rawMapToMapBounds.getNorthEast
+    // rawMapToMapBounds.getNorthWest
 
   }
 
@@ -1148,6 +1176,10 @@ window.initMap = async function() {
   crossmap("sava")
   crossmap("munzig")
   crossmap("kell")
+  crossmap("purgg")
+  crossmap("raddis")
+  crossmap("bernloch")
+  crossmap("ballenhof")
 
   crossmap("russbach")
   crossmap("bogglewort")
@@ -1167,8 +1199,8 @@ window.initMap = async function() {
 
 
 
-  fastMarker(rawOrigin.getNorthEast, "rawOrigin.getNorthEast")
-  fastMarker(rawOrigin.getSouthWest, "rawOrigin.getSouthWest")
+  fastMarker(rawOrigin.getNorthWest, "rawOrigin.getNorthWest")
+  fastMarker(rawOrigin.getSouthEast, "rawOrigin.getSouthEast")
   //
   //
   //
