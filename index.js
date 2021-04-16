@@ -303,7 +303,7 @@ window.initMap = async function() {
     },
 
     createMarker: function(info) {
-      console.info(name());
+      // console.info(name());
       if (!info.position) return
 
 
@@ -365,7 +365,7 @@ window.initMap = async function() {
   //       tags: ["temp"]
   //     }
   //   }))
-  //
+
 
 
   map.handlers.lines = {
@@ -381,6 +381,7 @@ window.initMap = async function() {
 
     saveLinesToMemory: function() {
       var mem = this.lines.map(line => line.export()).filter(r => r)
+        .filter(m => !m.data.tags.includes("temp"))
       console.info(name(), mem.length);
       this.map.handlers.memory.save("lines", JSON.stringify(mem))
     },
@@ -414,12 +415,14 @@ window.initMap = async function() {
 
       // make line
       var line = new google.maps.Polyline({
+        data: info.data || {
+          id: randomString(),
+          tags: []
+        },
         ...info,
         path: info.path,
         map: this.map,
-        data: info.data || {
-          id: randomString()
-        },
+
         export: function() {
           if (this.getPath().getArray().length < 2) return undefined
           return {
@@ -464,31 +467,10 @@ window.initMap = async function() {
 
   var lines = map.handlers.lines.init(map)
   lines.loadLinesFromMemory()
-  // lines.deleteAllLines()
+  lines.deleteAllLines()
 
 
-  // lines.createLine({
-  //
-  //
-  //   strokeColor: 'blue',
-  //   strokeOpacity: 0,
-  //
-  //   icons: [{
-  //     icon: {
-  //       path: "M 0,-1 0,1",
-  //       strokeOpacity: 1,
-  //       scale: 4,
-  //     },
-  //     offset: "0",
-  //     repeat: "20px",
-  //   }, ],
-  //
-  //
-  //   path: Array.from(new Array(20)).map((e, i) => ({
-  //     lng: (i + 1) / -10,
-  //     lat: (i + 1) / -10,
-  //   }))
-  // })
+
 
   lines.lines
     .map(line => line.setEditable(true))
@@ -522,7 +504,7 @@ window.initMap = async function() {
             // google.maps.drawing.OverlayType.CIRCLE,
             // google.maps.drawing.OverlayType.POLYGON,
             google.maps.drawing.OverlayType.POLYLINE,
-            // google.maps.drawing.OverlayType.RECTANGLE,
+            google.maps.drawing.OverlayType.RECTANGLE,
           ],
         },
         markerOptions: {
@@ -729,7 +711,491 @@ window.initMap = async function() {
   }
 
 
-  map.handlers.controls.init(map, markers, lines)
+  var drawController = await map.handlers.controls.init(map, markers, lines)
+
+
+
+
+
+
+  var mapLocationDrawer = {
+
+
+    init: async function(drawingManager) {
+      class USGSOverlay extends google.maps.OverlayView {
+        constructor(bounds, image) {
+          super();
+          // Initialize all properties.
+          this.bounds_ = bounds;
+          this.image_ = image;
+          // Define a property to hold the image's div. We'll
+          // actually create this div upon receipt of the onAdd()
+          // method so we'll leave it null for now.
+          this.div_ = null;
+        }
+        updateBounds(bounds) {
+          this.bounds_ = bounds
+          this.draw()
+        }
+        /**
+         * onAdd is called when the map's panes are ready and the overlay has been
+         * added to the map.
+         */
+        onAdd() {
+          this.div_ = document.createElement("div");
+          this.div_.style.borderStyle = "none";
+          this.div_.style.borderWidth = "0px";
+          this.div_.style.position = "absolute";
+          // Create the img element and attach it to the div.
+          const img = document.createElement("img");
+          img.src = this.image_;
+          img.style.width = "100%";
+          img.style.height = "100%";
+          img.style.position = "absolute";
+          img.style.opacity = 0.5;
+
+
+          this.div_.appendChild(img);
+          // Add the element to the "overlayLayer" pane.
+          const panes = this.getPanes();
+          panes.overlayLayer.appendChild(this.div_);
+        }
+        draw() {
+          // We use the south-west and north-east
+          // coordinates of the overlay to peg it to the correct position and size.
+          // To do this, we need to retrieve the projection from the overlay.
+          const overlayProjection = this.getProjection();
+          // Retrieve the south-west and north-east coordinates of this overlay
+          // in LatLngs and convert them to pixel coordinates.
+          // We'll use these coordinates to resize the div.
+          const sw = overlayProjection.fromLatLngToDivPixel(
+            this.bounds_.getSouthWest()
+          );
+          const ne = overlayProjection.fromLatLngToDivPixel(
+            this.bounds_.getNorthEast()
+          );
+
+          // Resize the image's div to fit the indicated dimensions.
+          if (this.div_) {
+            this.div_.style.left = sw.x + "px";
+            this.div_.style.top = ne.y + "px";
+            this.div_.style.width = ne.x - sw.x + "px";
+            this.div_.style.height = sw.y - ne.y + "px";
+          }
+        }
+        /**
+         * The onRemove() method will be called automatically from the API if
+         * we ever set the overlay's map property to 'null'.
+         */
+        onRemove() {
+          if (this.div_) {
+            this.div_.parentNode.removeChild(this.div_);
+            this.div_ = null;
+          }
+        }
+      }
+
+      google.maps.event.addListener(drawingManager, 'rectanglecomplete', (rectangle) => {
+        console.log(rectangle);
+        // rectangle.draggable
+        // editable: true
+        // rectangle.setDraggable(true)
+        rectangle.setEditable(true)
+        overlay = new USGSOverlay(rectangle.getBounds(), "/map/mapreader/test_images/5120_empire_bw3.png", map);
+        overlay.setMap(map);
+
+
+        google.maps.event.addListener(rectangle, 'bounds_changed', () => {
+          overlay.updateBounds(rectangle.getBounds(rectangle))
+
+          // NW coordinates - (x1, y1)
+          // SE coordinates - (x2, y2)
+          // NE coordinates - (x2, y1)
+          // SW coordinates - (x1, y2)
+
+          console.log({
+            getNorthEast: rectangle.getBounds().getNorthEast().toJSON(),
+            getSouthWest: rectangle.getBounds().getSouthWest().toJSON(),
+          });
+        });
+
+
+      });
+
+    }
+  }
+
+  mapLocationDrawer.init(drawController.drawingManager)
+
+
+
+
+
+
+
+  //
+  //
+  //
+  //
+
+
+
+
+
+
+  var locations = await fetch('./map/mapreader/foundImages_5120_empire_bw3.json')
+    .then(r => r.json())
+  // var content = fs.readFileSync(fileName);
+  // var locations = JSON.parse(content)
+  // console.log("parseLocationNames", locations.length);
+  var indexLocation = locations[0]
+  locations = locations.filter((a, i) => i != 0)
+  // console.log("parseLocationNames", locations.length);
+
+  var run = location => {
+    if (!location) return
+    // console.log("parseLocationNames", location.description);
+
+    var l = location.boundingPoly.vertices[0]
+    return {
+      x: l.x,
+      y: l.y,
+    }
+
+  }
+  var makeLatLng = a => ({
+    lat: a[0],
+    lng: a[1]
+  })
+
+
+  var addLatLng = (a, b) => ({
+    lat: a.lat + b.lat,
+    lng: a.lng + b.lng,
+  })
+
+
+
+
+  var altdorf = {
+    title: "altdorf",
+    raw: run(locations.find(l => l.description.toLowerCase().includes("altdorf"))),
+    map: makeLatLng([31.874268441160677, -16.277407946030955])
+  }
+
+  var talabheim = {
+    title: "talabheim",
+    raw: run(locations.find(l => l.description.toLowerCase().includes("talabheim"))),
+    map: makeLatLng([35.692076013481106, -0.5703095462174956])
+  }
+
+
+  var mittelweg = {
+    title: "mittelweg",
+    raw: run(locations.find(l => l.description.toLowerCase().includes("mittelweg"))),
+    map: {
+      lng: -13.103833780821974,
+      lat: 38.672541446056215
+    }
+
+
+  }
+
+
+
+
+
+  // markers.createMarker({
+  //   position: altdorf.map,
+  //   data: {
+  //     tags: ["temp"],
+  //     title: altdorf.title
+  //   }
+  // })
+  //
+  // markers.createMarker({
+  //   position: talabheim.map,
+  //   data: {
+  //     tags: ["temp"],
+  //     title: talabheim.title
+  //   }
+  // })
+
+
+  // markers.createMarker({
+  //   position: makeLatLng([0, 0]),
+  //   data: {
+  //     tags: ["temp"],
+  //     title: "middle"
+  //   }
+  // })
+
+  // altdorf.absolute = addLatLng(altdorf.map, {
+  //   lat: topLeftRawMap.lat,
+  //   lng: topLeftRawMap.lng
+  // });
+
+
+
+  lines.createLine({
+    path: [{
+        lng: 0,
+        lat: 80
+      }, {
+        lng: 0,
+        lat: 0
+      },
+      {
+        lng: 0,
+        lat: -80
+      }
+    ],
+    tags: ["temp"],
+  })
+
+  lines.createLine({
+    path: [{
+        lng: 180,
+        lat: 0
+      }, {
+        lng: 0,
+        lat: 0
+      },
+      {
+        lng: -180,
+        lat: 0
+      }
+    ],
+    tags: ["temp"],
+  })
+
+
+  console.log(altdorf.absolute);
+  console.log(altdorf.map, altdorf.raw);
+
+
+
+
+
+
+  var rawOrigin = {
+    getNorthEast: {
+      lat: 51.61577247781892,
+      lng: -24.50441987718352
+    },
+    getSouthWest: {
+      lat: 4.244208080077743,
+      lng: 31.7345937946915
+    }
+
+
+  }
+
+
+
+  console.log("absolte lat", rawOrigin.getNorthEast.lat + rawOrigin.getSouthWest.lat);
+  console.log("absolte lng", rawOrigin.getNorthEast.lng + -rawOrigin.getSouthWest.lng);
+
+  var maxLat = 55.85998055789666
+  var maxLng = 56.239013671875014
+
+  var maxX = 5123
+  var maxy = 5110
+
+
+  var rawOriginCalc = {
+
+    maxLat,
+    maxLng,
+    maxX,
+    maxy,
+
+
+    lng_X: maxX / maxLat,
+    lat_Y: maxy / maxLng,
+
+  }
+
+
+
+  var applyOffset = a => addLatLng(a, {
+
+    lat: rawOrigin.getNorthEast.lat,
+    lng: rawOrigin.getNorthEast.lng,
+
+  })
+  var removeOffset = a => addLatLng(a, {
+
+    lat: -rawOrigin.getNorthEast.lat,
+    lng: -rawOrigin.getNorthEast.lng,
+
+  })
+  var multiplier = 1
+  // console.warn(applyOffset(altdorf.map), altdorf.map, altdorf.raw.y / rawOriginCalc.lat_Y, altdorf.raw.x / rawOriginCalc.lng_X);
+  // console.warn(applyOffset(talabheim.map), talabheim.map, talabheim.raw.y / rawOriginCalc.lat_Y, talabheim.raw.x / rawOriginCalc.lng_X);
+  // console.warn(applyOffset(mittelweg.map), mittelweg.map, mittelweg.raw.y / rawOriginCalc.lat_Y, mittelweg.raw.x / rawOriginCalc.lng_X);
+
+
+  console.log(altdorf.raw.y, altdorf.raw.x)
+  // console.log(removeOffset(altdorf.map))
+
+
+  var fastMarker = (pos, title) => {
+    markers.createMarker({
+      position: pos,
+      data: {
+        tags: ["temp"],
+        title: title
+      }
+    })
+  }
+
+  var distance = (x1, x2, y1, y2) => Math.sqrt(Math.abs((x1 - x2) ^ 2 + (y1 - y2) ^ 2))
+
+
+
+
+
+
+  var townTriangulationMap = {
+
+    altdorfmittelwegDistance: distance(altdorf.map.lng, mittelweg.map.lng, altdorf.map.lat, mittelweg.map.lat, ),
+    talabheimmittelwegDistance: distance(talabheim.map.lng, mittelweg.map.lng, talabheim.map.lat, mittelweg.map.lat, ),
+    talabheimaltdorfDistance: distance(talabheim.map.lng, altdorf.map.lng, talabheim.map.lat, altdorf.map.lat, ),
+  }
+
+  var townTriangulationRaw = {
+
+    altdorfmittelwegDistance: distance(altdorf.raw.x, mittelweg.raw.x, altdorf.raw.y, mittelweg.raw.y, ),
+    talabheimmittelwegDistance: distance(talabheim.raw.x, mittelweg.raw.x, talabheim.raw.y, mittelweg.raw.y, ),
+    talabheimaltdorfDistance: distance(talabheim.raw.x, altdorf.raw.x, talabheim.raw.y, altdorf.raw.y, ),
+  }
+
+
+
+
+
+  // console.log("townTriangulationMap", townTriangulationMap);
+  // console.log("townTriangulationRaw", townTriangulationRaw);
+
+
+
+
+  var crossmap = (name) => {
+
+    var raw = run(locations.find(l => l.description.toLowerCase().includes(name)))
+    if (!raw) return
+
+
+
+
+    var x = raw.x
+    var y = raw.y
+    var XMax = indexLocation.boundingPoly.vertices[2].x
+    var YMax = indexLocation.boundingPoly.vertices[2].y
+
+
+    // console.log(x, XMax, x / XMax, "%");
+    // console.log(y, YMax, y / YMax, "%");
+
+    var rawMapToMapBounds = rawOrigin
+    // console.log(rawMapToMapBounds);
+
+    var lngDistance = Math.abs(rawMapToMapBounds.getNorthEast.lng) + Math.abs(rawMapToMapBounds.getSouthWest.lng)
+    var latDistance = Math.abs(rawMapToMapBounds.getNorthEast.lat) + Math.abs(rawMapToMapBounds.getSouthWest.lat)
+    // console.log(lngDistance);
+    // console.log(latDistance);
+
+    var mappedXToLngPercent = (x / XMax) * lngDistance
+    var mappedYToLatPercent = (y / YMax) * latDistance
+
+    // console.log("mappedXToLngPercent", mappedXToLngPercent)
+    // console.log("mappedYToLatPercent", mappedYToLatPercent)
+
+
+
+
+    // console.log(name," rawMapToMapBounds.getNorthEast.lng + mappedXToLngPercent", mappedXToLngPercent);
+    console.log(name, mappedYToLatPercent, (latDistance / 2));
+
+
+
+
+    var calc = {
+      lng: (rawMapToMapBounds.getNorthEast.lng + mappedXToLngPercent - 6.8),
+      lat: (rawMapToMapBounds.getNorthEast.lat + -mappedYToLatPercent + 7) - ((latDistance / 2) - (mappedYToLatPercent)) / 5,
+    }
+
+    // console.log("calc", calc);
+
+
+    fastMarker(calc, name)
+
+
+
+    // rawMapToMapBounds.getNorthEast
+
+  }
+
+
+  crossmap("altdorf")
+  crossmap("mittelweg")
+  crossmap("talabheim")
+  crossmap("carroburg")
+  crossmap("bokel")
+  crossmap("akendorf")
+  crossmap("sava")
+  crossmap("munzig")
+  crossmap("kell")
+
+  crossmap("russbach")
+  crossmap("bogglewort")
+
+
+
+
+
+  /*
+  ok perhaps i  can take the raw number (say x/lng) and find the bound extends on the  lng axis on the map
+  thisll give a nnumber thats the total width of the avalible area where a point can fall on the raw mmap
+  then i can find the % of how far over on the x axis the raw location is
+  then find the same person on the lng axis, which should give the same location
+  */
+
+
+
+
+
+  fastMarker(rawOrigin.getNorthEast, "rawOrigin.getNorthEast")
+  fastMarker(rawOrigin.getSouthWest, "rawOrigin.getSouthWest")
+  //
+  //
+  //
+  //
+  // fastMarker(removeOffset(altdorf.map), "removeOffset(altdorf.map)")
+  // fastMarker(removeOffset(mittelweg.map), "removeOffset(mittelweg.map)")
+  // fastMarker(removeOffset(talabheim.map), "removeOffset(talabheim.map)")
+  //
+  //
+  // fastMarker({lat:altdorf.raw.y/100, lng:altdorf.raw.x/100}, "altdorf.raw")
+  // fastMarker({lat:mittelweg.raw.y/100, lng:mittelweg.raw.x/100}, "mittelweg.raw")
+  // fastMarker({lat:talabheim.raw.y/100, lng:talabheim.raw.x/100}, "talabheim.raw")
+
+  /*
+  move map altdorf origin to raw top left
+  minus raw locations so that their origin is bottom right
+  make origin of raw and map the same
+  */
+
+
+  //
+  //
+  //
+  //
+  //
+
+
+
 
 
 
@@ -1266,23 +1732,7 @@ window.initMap = async function() {
         exportData(coords, 'stateShape')
       });
 
-      google.maps.event.addListener(drawingManager, 'rectanglecomplete', (rectangle) => {
-        // rectangle.draggable
-        // editable: true
-        rectangle.setDraggable(this.config.setDraggable)
-        rectangle.setEditable(this.config.setEditable)
-        log("old", rectangle.getBounds());
-        overlay = new USGSOverlay(rectangle.getBounds(), "/data/statemap.jpg", map);
-        overlay.setMap(map);
 
-
-        google.maps.event.addListener(rectangle, 'bounds_changed', () => {
-          log("old", 'Bounds changed.');
-          overlay.updateBounds(rectangle.getBounds(rectangle))
-        });
-
-
-      });
 
     }
   }
