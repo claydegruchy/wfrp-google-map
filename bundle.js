@@ -834,173 +834,177 @@ window.initMap = async function() {
 
 
 
-  //
-  //
-  //
-  //
+
+  map.handlers.locationNames = {
+    init: async function(map, mapFileCorners, mapFileURL) {
+
+      console.info("locationNames", name());
+      this.map = map
+      this.mapFile = await fetch(mapFileURL)
+        .then(r => r.json())
+      this.mapFileCorners = mapFileCorners
+
+      this.indexLocation = this.mapFile[0]
+      this.locations = this.mapFile.filter((a, i) => i != 0)
+      return this
+    },
+    diagMode: function() {
+
+
+      this.map.handlers.lines.createLine({
+        path: [{
+            lng: 0,
+            lat: 80
+          }, {
+            lng: 0,
+            lat: 0
+          },
+          {
+            lng: 0,
+            lat: -80
+          }
+        ],
+        tags: ["temp"],
+      })
+
+      this.map.handlers.lines.createLine({
+        path: [{
+            lng: 180,
+            lat: 0
+          }, {
+            lng: 0,
+            lat: 0
+          },
+          {
+            lng: -180,
+            lat: 0
+          }
+        ],
+        tags: ["temp"],
+      })
 
 
 
+      this.fastMarker(this.mapFileCorners.getNorthWest, "this.mapFileCorners.getNorthWest")
+      this.fastMarker(this.mapFileCorners.getSouthEast, "this.mapFileCorners.getSouthEast")
 
 
+    },
+    findLocationCenter: function(location) {
 
-  var locations = await fetch('./map/mapreader/foundImages_5120_empire_bw3.json')
-    .then(r => r.json())
-  // var content = fs.readFileSync(fileName);
-  // var locations = JSON.parse(content)
-  // console.log("parseLocationNames", locations.length);
-  var indexLocation = locations[0]
-  locations = locations.filter((a, i) => i != 0)
-  // console.log("parseLocationNames", locations.length);
-
-  var makeLatLng = a => ({
-    lat: a[0],
-    lng: a[1]
-  })
-
-
-  var run = location => {
-
-    var center = function(arr) {
-      var x = arr.map(function(a) {
-        return a[0]
-      });
-      var y = arr.map(function(a) {
-        return a[1]
-      });
-      var minX = Math.min.apply(null, x);
-      var maxX = Math.max.apply(null, x);
-      var minY = Math.min.apply(null, y);
-      var maxY = Math.max.apply(null, y);
-      return [(minX + maxX) / 2, (minY + maxY) / 2];
-    }
-
-
-    if (!location) return
-
-    var l = center(location.boundingPoly.vertices.map(v => [v.x, v.y]))
-
-    // console.log("parseLocationNames", location.description);
-
-    return {
-      x: l[0],
-      y: l[1],
-    }
-
-  }
-
-
-
-  var addLatLng = (a, b) => ({
-    lat: a.lat + b.lat,
-    lng: a.lng + b.lng,
-  })
-
-
-
-
-  var altdorf = {
-    title: "altdorf",
-    raw: run(locations.find(l => l.description.toLowerCase().includes("altdorf"))),
-    map: makeLatLng([31.874268441160677, -16.277407946030955])
-  }
-
-  var talabheim = {
-    title: "talabheim",
-    raw: run(locations.find(l => l.description.toLowerCase().includes("talabheim"))),
-    map: makeLatLng([35.692076013481106, -0.5703095462174956])
-  }
-
-
-  var mittelweg = {
-    title: "mittelweg",
-    raw: run(locations.find(l => l.description.toLowerCase().includes("mittelweg"))),
-    map: {
-      lng: -13.103833780821974,
-      lat: 38.672541446056215
-    }
-
-
-  }
-
-
-
-
-
-  // markers.createMarker({
-  //   position: altdorf.map,
-  //   data: {
-  //     tags: ["temp"],
-  //     title: altdorf.title
-  //   }
-  // })
-  //
-  // markers.createMarker({
-  //   position: talabheim.map,
-  //   data: {
-  //     tags: ["temp"],
-  //     title: talabheim.title
-  //   }
-  // })
-
-
-  // markers.createMarker({
-  //   position: makeLatLng([0, 0]),
-  //   data: {
-  //     tags: ["temp"],
-  //     title: "middle"
-  //   }
-  // })
-
-  // altdorf.absolute = addLatLng(altdorf.map, {
-  //   lat: topLeftRawMap.lat,
-  //   lng: topLeftRawMap.lng
-  // });
-
-
-
-  lines.createLine({
-    path: [{
-        lng: 0,
-        lat: 80
-      }, {
-        lng: 0,
-        lat: 0
-      },
-      {
-        lng: 0,
-        lat: -80
+      var center = function(arr) {
+        var x = arr.map(function(a) {
+          return a[0]
+        });
+        var y = arr.map(function(a) {
+          return a[1]
+        });
+        var minX = Math.min.apply(null, x);
+        var maxX = Math.max.apply(null, x);
+        var minY = Math.min.apply(null, y);
+        var maxY = Math.max.apply(null, y);
+        return [(minX + maxX) / 2, (minY + maxY) / 2];
       }
-    ],
-    tags: ["temp"],
-  })
 
-  lines.createLine({
-    path: [{
-        lng: 180,
-        lat: 0
-      }, {
-        lng: 0,
-        lat: 0
-      },
-      {
-        lng: -180,
-        lat: 0
+
+      if (!location) return
+
+      var l = center(location.boundingPoly.vertices.map(v => [v.x, v.y]))
+
+      // console.log("parseLocationNames", location.description);
+
+      return {
+        x: l[0],
+        y: l[1],
       }
-    ],
-    tags: ["temp"],
-  })
+
+    },
+
+    findLocationByName: function(name) {
+      var raw = this.findLocationCenter(this.locations.find(l => l.description.toLowerCase().includes(name)))
+      if (!raw) {
+        console.log("location", name, "not found");
+        return
+      }
 
 
-  console.log(altdorf.absolute);
-  console.log(altdorf.map, altdorf.raw);
+
+
+      var x = raw.x
+      var y = raw.y
+      var XMax = this.indexLocation.boundingPoly.vertices[2].x
+      var YMax = this.indexLocation.boundingPoly.vertices[2].y
+
+
+
+      // console.log(x, XMax, x / XMax, "%");
+      // console.log(y, YMax, y / YMax, "%");
+
+      var rawMapToMapBounds = this.mapFileCorners
+
+      var lngDistance = Math.abs(rawMapToMapBounds.getNorthWest.lng) + Math.abs(rawMapToMapBounds.getSouthEast.lng)
+      var latDistance = Math.abs(rawMapToMapBounds.getNorthWest.lat) + Math.abs(rawMapToMapBounds.getSouthEast.lat)
+      // console.log(lngDistance);
+      // console.log(latDistance);
+
+
+
+      var mappedXToLngPercent = (x / XMax) * lngDistance
+      var mappedYToLatPercent = (y / YMax) * latDistance
+
+      // console.log("mappedXToLngPercent", mappedXToLngPercent)
+      // console.log("mappedYToLatPercent", mappedYToLatPercent)
 
 
 
 
+      // console.log(name," rawMapToMapBounds.getNorthWest.lng + mappedXToLngPercent", mappedXToLngPercent);
+      console.log(name, mappedYToLatPercent, (latDistance / 2), ((latDistance / 2) - (mappedYToLatPercent)), (y / YMax));
 
 
-  var rawOrigin = {
+
+
+      var calc = {
+        lng: rawMapToMapBounds.getNorthWest.lng + (mappedXToLngPercent - 6.9),
+        lat: rawMapToMapBounds.getNorthWest.lat + (((-mappedYToLatPercent + 7) - ((latDistance / 2) - (mappedYToLatPercent)) / 5)),
+        // lat: rawMapToMapBounds.getNorthWest.lat + (((-mappedYToLatPercent + 7) - ((latDistance / 2) - (mappedYToLatPercent)) / 5)),
+        // lat: rawMapToMapBounds.getNorthWest.lat + (-mappedYToLatPercent),
+      }
+
+      // console.log("calc", calc);
+
+
+      // fastMarker(calc, name)
+
+      return calc
+
+
+
+      // rawMapToMapBounds.getNorthWest
+
+    },
+
+    fastMarker: function(pos, title) {
+      return this.map.handlers.markers.createMarker({
+        position: pos,
+        data: {
+          tags: ["temp"],
+          title: title
+        }
+      })
+    },
+    placeMarkerAtTown: function(name) {
+
+      var pos = this.findLocationByName(name)
+      if (!pos) {
+        console.warn(name, "not found");
+      }
+      this.fastMarker(pos, name)
+    }
+  }
+
+
+  var locationNames = await map.handlers.locationNames.init(map, {
     getNorthWest: {
       lat: 51.61577247781892,
       lng: -24.50441987718352
@@ -1011,178 +1015,26 @@ window.initMap = async function() {
     }
 
 
-  }
-
-
-
-  console.log("absolte lat", rawOrigin.getNorthWest.lat + rawOrigin.getSouthEast.lat);
-  console.log("absolte lng", rawOrigin.getNorthWest.lng + -rawOrigin.getSouthEast.lng);
-
-  var maxLat = 55.85998055789666
-  var maxLng = 56.239013671875014
-
-  var maxX = 5123
-  var maxy = 5110
-
-
-  var rawOriginCalc = {
-
-    maxLat,
-    maxLng,
-    maxX,
-    maxy,
-
-
-    lng_X: maxX / maxLat,
-    lat_Y: maxy / maxLng,
-
-  }
-
-
-
-  var applyOffset = a => addLatLng(a, {
-
-    lat: rawOrigin.getNorthWest.lat,
-    lng: rawOrigin.getNorthWest.lng,
-
-  })
-  var removeOffset = a => addLatLng(a, {
-
-    lat: -rawOrigin.getNorthWest.lat,
-    lng: -rawOrigin.getNorthWest.lng,
-
-  })
-  var multiplier = 1
-  // console.warn(applyOffset(altdorf.map), altdorf.map, altdorf.raw.y / rawOriginCalc.lat_Y, altdorf.raw.x / rawOriginCalc.lng_X);
-  // console.warn(applyOffset(talabheim.map), talabheim.map, talabheim.raw.y / rawOriginCalc.lat_Y, talabheim.raw.x / rawOriginCalc.lng_X);
-  // console.warn(applyOffset(mittelweg.map), mittelweg.map, mittelweg.raw.y / rawOriginCalc.lat_Y, mittelweg.raw.x / rawOriginCalc.lng_X);
-
-
-  console.log(altdorf.raw.y, altdorf.raw.x)
-  // console.log(removeOffset(altdorf.map))
-
-
-  var fastMarker = (pos, title) => {
-    markers.createMarker({
-      position: pos,
-      data: {
-        tags: ["temp"],
-        title: title
-      }
-    })
-  }
-
-  var distance = (x1, x2, y1, y2) => Math.sqrt(Math.abs((x1 - x2) ^ 2 + (y1 - y2) ^ 2))
-
-
-
-
-
-
-  var townTriangulationMap = {
-
-    altdorfmittelwegDistance: distance(altdorf.map.lng, mittelweg.map.lng, altdorf.map.lat, mittelweg.map.lat, ),
-    talabheimmittelwegDistance: distance(talabheim.map.lng, mittelweg.map.lng, talabheim.map.lat, mittelweg.map.lat, ),
-    talabheimaltdorfDistance: distance(talabheim.map.lng, altdorf.map.lng, talabheim.map.lat, altdorf.map.lat, ),
-  }
-
-  var townTriangulationRaw = {
-
-    altdorfmittelwegDistance: distance(altdorf.raw.x, mittelweg.raw.x, altdorf.raw.y, mittelweg.raw.y, ),
-    talabheimmittelwegDistance: distance(talabheim.raw.x, mittelweg.raw.x, talabheim.raw.y, mittelweg.raw.y, ),
-    talabheimaltdorfDistance: distance(talabheim.raw.x, altdorf.raw.x, talabheim.raw.y, altdorf.raw.y, ),
-  }
-
-
-
-
-
-  // console.log("townTriangulationMap", townTriangulationMap);
-  // console.log("townTriangulationRaw", townTriangulationRaw);
-
-
-
-
-  var crossmap = (name) => {
-
-
-
-    var raw = run(locations.find(l => l.description.toLowerCase().includes(name)))
-    if (!raw) return
-
-
-
-
-    var x = raw.x
-    var y = raw.y
-    var XMax = indexLocation.boundingPoly.vertices[2].x
-    var YMax = indexLocation.boundingPoly.vertices[2].y
-
-
-
-    // console.log(x, XMax, x / XMax, "%");
-    // console.log(y, YMax, y / YMax, "%");
-
-    var rawMapToMapBounds = rawOrigin
-    // console.log(rawMapToMapBounds);
-
-    var lngDistance = Math.abs(rawMapToMapBounds.getNorthWest.lng) + Math.abs(rawMapToMapBounds.getSouthEast.lng)
-    var latDistance = Math.abs(rawMapToMapBounds.getNorthWest.lat) + Math.abs(rawMapToMapBounds.getSouthEast.lat)
-    // console.log(lngDistance);
-    // console.log(latDistance);
-
-
-
-    var mappedXToLngPercent = (x / XMax) * lngDistance
-    var mappedYToLatPercent = (y / YMax) * latDistance
-
-    // console.log("mappedXToLngPercent", mappedXToLngPercent)
-    // console.log("mappedYToLatPercent", mappedYToLatPercent)
-
-
-
-
-    // console.log(name," rawMapToMapBounds.getNorthWest.lng + mappedXToLngPercent", mappedXToLngPercent);
-    console.log(name, mappedYToLatPercent, (latDistance / 2), ((latDistance / 2) - (mappedYToLatPercent)), (y / YMax));
-
-
-
-
-    var calc = {
-      lng: rawMapToMapBounds.getNorthWest.lng + (mappedXToLngPercent - 6.9),
-      // lat: rawMapToMapBounds.getNorthWest.lat + (((-mappedYToLatPercent + 7) - ((latDistance / 2) - (mappedYToLatPercent)) / 5)),
-      // lat: rawMapToMapBounds.getNorthWest.lat + (((-mappedYToLatPercent + 7) - ((latDistance / 2) - (mappedYToLatPercent)) / 5)),
-      lat: rawMapToMapBounds.getNorthWest.lat + (-mappedYToLatPercent),
-    }
-
-    // console.log("calc", calc);
-
-
-    fastMarker(calc, name)
-
-
-
-    // rawMapToMapBounds.getNorthWest
-
-  }
-
-
-  crossmap("altdorf")
-  crossmap("mittelweg")
-  crossmap("talabheim")
-  crossmap("carroburg")
-  crossmap("bokel")
-  crossmap("akendorf")
-  crossmap("sava")
-  crossmap("munzig")
-  crossmap("kell")
-  crossmap("purgg")
-  crossmap("raddis")
-  crossmap("bernloch")
-  crossmap("ballenhof")
-
-  crossmap("russbach")
-  crossmap("bogglewort")
+  }, './map/mapreader/foundImages_5120_empire_bw3.json')
+
+
+  locationNames.diagMode()
+  // locationNames.placeMarkerAtTown("altdorf")
+  // locationNames.placeMarkerAtTown("mittelweg")
+  // locationNames.placeMarkerAtTown("talabheim")
+  // locationNames.placeMarkerAtTown("carroburg")
+  // locationNames.placeMarkerAtTown("bokel")
+  // locationNames.placeMarkerAtTown("akendorf")
+  // locationNames.placeMarkerAtTown("sava")
+  // locationNames.placeMarkerAtTown("munzig")
+  // locationNames.placeMarkerAtTown("kell")
+  // locationNames.placeMarkerAtTown("purgg")
+  // locationNames.placeMarkerAtTown("raddis")
+  // locationNames.placeMarkerAtTown("bernloch")
+  // locationNames.placeMarkerAtTown("ballenhof")
+  // locationNames.placeMarkerAtTown("russbach")
+  // locationNames.placeMarkerAtTown("zundap")
+  // locationNames.placeMarkerAtTown("kurst")
 
 
 
@@ -1198,9 +1050,6 @@ window.initMap = async function() {
 
 
 
-
-  fastMarker(rawOrigin.getNorthWest, "rawOrigin.getNorthWest")
-  fastMarker(rawOrigin.getSouthEast, "rawOrigin.getSouthEast")
   //
   //
   //
