@@ -352,8 +352,8 @@ window.initMap = async function() {
 
   var markers = map.handlers.markers.init(map)
   markers.loadMarkersFromMemory()
-  // markers.markers.map(m => m.setDraggable(true))
-  markers.deleteAllMarkers()
+  markers.markers.map(m => m.setDraggable(true))
+  // markers.deleteAllMarkers()
   //
   // Array.from(new Array(10))
   //   .forEach((e, i) => markers.createMarker({
@@ -467,7 +467,7 @@ window.initMap = async function() {
 
   var lines = map.handlers.lines.init(map)
   lines.loadLinesFromMemory()
-  lines.deleteAllLines()
+  // lines.deleteAllLines()
 
 
 
@@ -479,11 +479,200 @@ window.initMap = async function() {
 
 
 
+  map.handlers.locationNames = {
+    init: async function(map, data) {
+
+      console.info("locationNames", name());
+      this.map = map
+      this.mapFile = await fetch(data.url)
+        .then(r => r.json())
+      this.mapFileCorners = data.mapFileCorners
+
+      this.indexLocation = this.mapFile[0]
+      this.locations = this.mapFile
+        .filter((a, i) => i != 0)
+        // clean the junk  out
+        .filter(a => a.description.length > 2)
+      return this
+    },
+    diagMode: function() {
+      this.map.handlers.lines.createLine({
+        path: [{
+            lng: 0,
+            lat: 80
+          }, {
+            lng: 0,
+            lat: 0
+          },
+          {
+            lng: 0,
+            lat: -80
+          }
+        ],
+        tags: ["temp"],
+      })
+
+      this.map.handlers.lines.createLine({
+        path: [{
+            lng: 180,
+            lat: 0
+          }, {
+            lng: 0,
+            lat: 0
+          },
+          {
+            lng: -180,
+            lat: 0
+          }
+        ],
+        tags: ["temp"],
+      })
+
+
+
+      this.fastMarker(this.mapFileCorners.getNorthWest, "this.mapFileCorners.getNorthWest")
+      this.fastMarker(this.mapFileCorners.getSouthEast, "this.mapFileCorners.getSouthEast")
+
+
+    },
+    findLocationCenter: function(location) {
+
+      var center = function(arr) {
+        var x = arr.map(function(a) {
+          return a[0]
+        });
+        var y = arr.map(function(a) {
+          return a[1]
+        });
+        var minX = Math.min.apply(null, x);
+        var maxX = Math.max.apply(null, x);
+        var minY = Math.min.apply(null, y);
+        var maxY = Math.max.apply(null, y);
+        return [(minX + maxX) / 2, (minY + maxY) / 2];
+      }
+
+
+      if (!location) return
+
+      var l = center(location.boundingPoly.vertices.map(v => [v.x, v.y]))
+
+      // console.log("parseLocationNames", location.description);
+
+      return {
+        x: l[0],
+        y: l[1],
+      }
+
+    },
+    findLocationByName: function(name) {
+      name = name.toLowerCase()
+      var raw = this.findLocationCenter(this.locations.find(l => l.description.toLowerCase().includes(name)))
+      if (!raw) {
+        console.log("location", name, "not found");
+        return
+      }
+
+
+
+
+      var x = raw.x
+      var y = raw.y
+      var XMax = this.indexLocation.boundingPoly.vertices[2].x
+      var YMax = this.indexLocation.boundingPoly.vertices[2].y
+
+
+
+      // console.log(x, XMax, x / XMax, "%");
+      // console.log(y, YMax, y / YMax, "%");
+
+      var rawMapToMapBounds = this.mapFileCorners
+
+      var lngDistance = Math.abs(rawMapToMapBounds.getNorthWest.lng) + Math.abs(rawMapToMapBounds.getSouthEast.lng)
+      var latDistance = Math.abs(rawMapToMapBounds.getNorthWest.lat) + Math.abs(rawMapToMapBounds.getSouthEast.lat)
+      // console.log(lngDistance);
+      // console.log(latDistance);
+
+
+
+      var mappedXToLngPercent = (x / XMax) * lngDistance
+      var mappedYToLatPercent = (y / YMax) * latDistance
+
+      // console.log("mappedXToLngPercent", mappedXToLngPercent)
+      // console.log("mappedYToLatPercent", mappedYToLatPercent)
+
+
+
+
+      // console.log(name," rawMapToMapBounds.getNorthWest.lng + mappedXToLngPercent", mappedXToLngPercent);
+      console.log(name, mappedYToLatPercent, (latDistance / 2), ((latDistance / 2) - (mappedYToLatPercent)), (y / YMax));
+
+
+
+
+      var calc = {
+        lng: rawMapToMapBounds.getNorthWest.lng + (mappedXToLngPercent - 6.9),
+        lat: rawMapToMapBounds.getNorthWest.lat + (((-mappedYToLatPercent + 7) - ((latDistance / 2) - (mappedYToLatPercent)) / 5)),
+        // lat: rawMapToMapBounds.getNorthWest.lat + (((-mappedYToLatPercent + 7) - ((latDistance / 2) - (mappedYToLatPercent)) / 5)),
+        // lat: rawMapToMapBounds.getNorthWest.lat + (-mappedYToLatPercent),
+      }
+
+      // console.log("calc", calc);
+
+
+      // fastMarker(calc, name)
+
+      return calc
+
+
+
+      // rawMapToMapBounds.getNorthWest
+
+    },
+
+    fastMarker: function(pos, title) {
+      return this.map.handlers.markers.createMarker({
+        position: pos,
+        data: {
+          tags: ["temp"],
+          title: title
+        }
+      })
+    },
+    placeMarkerAtTown: function(name) {
+
+      var pos = this.findLocationByName(name)
+      if (!pos) {
+        console.warn(name, "not found");
+      }
+      this.fastMarker(pos, name)
+    }
+  }
+
+
+  var locationNames = await map.handlers.locationNames.init(map, {
+    url: './map/mapreader/foundImages_5120_empire_bw3.json',
+    mapFileCorners: {
+      getNorthWest: {
+        lat: 51.61577247781892,
+        lng: -24.50441987718352
+      },
+      getSouthEast: {
+        lat: 4.244208080077743,
+        lng: 31.7345937946915
+      }
+
+
+    }
+  }, )
+
+
+
   map.handlers.controls = {
     settings: {
       markerEdit: true,
       lineEdit: false,
-      tags: ["temp"]
+      autoSelect: true,
+      tags: ["manual", "temp"]
     },
     init: async function(map, markers, lines) {
 
@@ -514,13 +703,16 @@ window.initMap = async function() {
       });
 
       this.drawingManager.setMap(map);
-      this.addListeners()
       await this.loadNav()
 
       for (let [n, obj] of Object.entries(this.menus)) {
         console.log("activating sidebar menu controller:", n);
         await obj.init(this)
       }
+      this.addListeners()
+
+
+
 
       return await this
     },
@@ -531,11 +723,20 @@ window.initMap = async function() {
         console.log(this.settings.tags);
         var m = this.markers.createMarker({
           position: marker.position,
-          tags: [...this.settings.tags]
+          draggable: this.settings.markerEdit,
+          data: {
+            tags: [...this.settings.tags]
+          }
+
         });
-        console.log(m);
+
+
         // delete the one placed bby the controller
         marker.setMap(null)
+
+        if (!this.settings.autoSelect) return
+        this.menus.hand.selectMarker(m)
+
       });
 
       google.maps.event.addListener(this.drawingManager, 'polylinecomplete', (line) => {
@@ -579,6 +780,7 @@ window.initMap = async function() {
           this.parent.markers.markers.forEach(mm => mm.setAnimation(null))
           this.parent.controlDIV.querySelector(".content").innerHTML = ""
           this.drawControls()
+          this.dehoverMarkers()
 
         },
         selectMarker: async function(marker) {
@@ -592,6 +794,7 @@ window.initMap = async function() {
           var inputs = [...container.querySelectorAll(".input")]
           // add event listeners to each  of the inputs
           inputs.forEach(input => input.addEventListener('keyup', e => this.inputboxSave(e, marker)))
+          inputs[0].select()
 
         },
         dehoverMarkers: async function() {
@@ -674,7 +877,7 @@ window.initMap = async function() {
 
         },
 
-      }
+      },
       /*
 
       hand:
@@ -707,6 +910,106 @@ window.initMap = async function() {
       placing a campaign champter that needs a lot of text
 
       */
+
+
+      searchbar: {
+        init: async function(parent) {
+          this.parent = parent
+
+
+          this.searchContainer = document.querySelector("#searchBar")
+          this.locations = this.parent.map.handlers.locationNames.locations
+          this.locationNamesObject = this.parent.map.handlers.locationNames
+          // perhaps cleaan the names  at this point
+
+          // get the templates
+          this.searchBarTemplate = await fetch("./templates/searchbar.hbs")
+            .then(r => r.text())
+            .then(r => Handlebars.compile(r))
+
+          this.searchContainer.innerHTML = this.searchBarTemplate(this.locations)
+          var searchBar = this.buildSearchBox()
+
+          return this
+
+        },
+
+        buildSearchBox: function() {
+
+          return new SlimSelect({
+            select: this.searchContainer.querySelector("select"),
+            placeholder: "What will you add to this potion?",
+            // limit: 2,
+            data: this.locations.map(l => ({
+              text: l.description
+            })),
+            placeholder: 'Placeholder Text Here',
+            closeOnSelect: true,
+            // showOptionTooltips: true,
+            // afterClose: function(t) {
+            //     this.open();
+            //     console.log('beforeClose' )
+            // },
+            // beforeClose: function(t) {
+            //     this.open();
+            //     console.log('beforeClose' )
+            // },
+            closeOnSelect: true,
+            onChange: async info => {
+
+              console.time("search");
+
+              var loc = this.locationNamesObject.findLocationByName(info.value)
+              if (!loc) return
+              loc = new google.maps.LatLng(loc);
+              console.time("panTo");
+              await this.parent.map.panTo(loc)
+              console.timeEnd("panTo");
+              console.time("setZoom");
+              await this.parent.map.setZoom(7)
+              console.timeEnd("setZoom");
+
+
+              var highlighter = new google.maps.Circle({
+                strokeOpacity: 0,
+                fillColor: "#FF0000",
+                fillOpacity: 0.35,
+                map: this.parent.map,
+                center: loc,
+                radius: 200000,
+              })
+              console.timeEnd("search");
+
+
+
+              var fadeoutTime = 2 //seconds
+              var fadeOutUpdateFreq = 50 //ms
+              var fadePerTick = (highlighter.fillOpacity / (fadeoutTime * fadeOutUpdateFreq))
+
+
+              var interval = setInterval(function() {
+                if (highlighter.fillOpacity <= 0) {
+                  clearInterval(interval);
+                  highlighter.setMap(null);
+                  console.log("deleted");
+                }
+                highlighter.setOptions({
+                  fillOpacity: highlighter.fillOpacity - fadePerTick
+                });
+
+              }, fadeOutUpdateFreq);
+
+
+
+
+
+            }
+          });
+        }
+
+
+      },
+
     }
   }
 
@@ -825,7 +1128,7 @@ window.initMap = async function() {
     }
   }
 
-  mapLocationDrawer.init(drawController.drawingManager)
+  // mapLocationDrawer.init(drawController.drawingManager)
 
 
 
@@ -834,190 +1137,8 @@ window.initMap = async function() {
 
 
 
-  map.handlers.locationNames = {
-    init: async function(map, mapFileCorners, mapFileURL) {
 
-      console.info("locationNames", name());
-      this.map = map
-      this.mapFile = await fetch(mapFileURL)
-        .then(r => r.json())
-      this.mapFileCorners = mapFileCorners
-
-      this.indexLocation = this.mapFile[0]
-      this.locations = this.mapFile.filter((a, i) => i != 0)
-      return this
-    },
-    diagMode: function() {
-
-
-      this.map.handlers.lines.createLine({
-        path: [{
-            lng: 0,
-            lat: 80
-          }, {
-            lng: 0,
-            lat: 0
-          },
-          {
-            lng: 0,
-            lat: -80
-          }
-        ],
-        tags: ["temp"],
-      })
-
-      this.map.handlers.lines.createLine({
-        path: [{
-            lng: 180,
-            lat: 0
-          }, {
-            lng: 0,
-            lat: 0
-          },
-          {
-            lng: -180,
-            lat: 0
-          }
-        ],
-        tags: ["temp"],
-      })
-
-
-
-      this.fastMarker(this.mapFileCorners.getNorthWest, "this.mapFileCorners.getNorthWest")
-      this.fastMarker(this.mapFileCorners.getSouthEast, "this.mapFileCorners.getSouthEast")
-
-
-    },
-    findLocationCenter: function(location) {
-
-      var center = function(arr) {
-        var x = arr.map(function(a) {
-          return a[0]
-        });
-        var y = arr.map(function(a) {
-          return a[1]
-        });
-        var minX = Math.min.apply(null, x);
-        var maxX = Math.max.apply(null, x);
-        var minY = Math.min.apply(null, y);
-        var maxY = Math.max.apply(null, y);
-        return [(minX + maxX) / 2, (minY + maxY) / 2];
-      }
-
-
-      if (!location) return
-
-      var l = center(location.boundingPoly.vertices.map(v => [v.x, v.y]))
-
-      // console.log("parseLocationNames", location.description);
-
-      return {
-        x: l[0],
-        y: l[1],
-      }
-
-    },
-
-    findLocationByName: function(name) {
-      var raw = this.findLocationCenter(this.locations.find(l => l.description.toLowerCase().includes(name)))
-      if (!raw) {
-        console.log("location", name, "not found");
-        return
-      }
-
-
-
-
-      var x = raw.x
-      var y = raw.y
-      var XMax = this.indexLocation.boundingPoly.vertices[2].x
-      var YMax = this.indexLocation.boundingPoly.vertices[2].y
-
-
-
-      // console.log(x, XMax, x / XMax, "%");
-      // console.log(y, YMax, y / YMax, "%");
-
-      var rawMapToMapBounds = this.mapFileCorners
-
-      var lngDistance = Math.abs(rawMapToMapBounds.getNorthWest.lng) + Math.abs(rawMapToMapBounds.getSouthEast.lng)
-      var latDistance = Math.abs(rawMapToMapBounds.getNorthWest.lat) + Math.abs(rawMapToMapBounds.getSouthEast.lat)
-      // console.log(lngDistance);
-      // console.log(latDistance);
-
-
-
-      var mappedXToLngPercent = (x / XMax) * lngDistance
-      var mappedYToLatPercent = (y / YMax) * latDistance
-
-      // console.log("mappedXToLngPercent", mappedXToLngPercent)
-      // console.log("mappedYToLatPercent", mappedYToLatPercent)
-
-
-
-
-      // console.log(name," rawMapToMapBounds.getNorthWest.lng + mappedXToLngPercent", mappedXToLngPercent);
-      console.log(name, mappedYToLatPercent, (latDistance / 2), ((latDistance / 2) - (mappedYToLatPercent)), (y / YMax));
-
-
-
-
-      var calc = {
-        lng: rawMapToMapBounds.getNorthWest.lng + (mappedXToLngPercent - 6.9),
-        lat: rawMapToMapBounds.getNorthWest.lat + (((-mappedYToLatPercent + 7) - ((latDistance / 2) - (mappedYToLatPercent)) / 5)),
-        // lat: rawMapToMapBounds.getNorthWest.lat + (((-mappedYToLatPercent + 7) - ((latDistance / 2) - (mappedYToLatPercent)) / 5)),
-        // lat: rawMapToMapBounds.getNorthWest.lat + (-mappedYToLatPercent),
-      }
-
-      // console.log("calc", calc);
-
-
-      // fastMarker(calc, name)
-
-      return calc
-
-
-
-      // rawMapToMapBounds.getNorthWest
-
-    },
-
-    fastMarker: function(pos, title) {
-      return this.map.handlers.markers.createMarker({
-        position: pos,
-        data: {
-          tags: ["temp"],
-          title: title
-        }
-      })
-    },
-    placeMarkerAtTown: function(name) {
-
-      var pos = this.findLocationByName(name)
-      if (!pos) {
-        console.warn(name, "not found");
-      }
-      this.fastMarker(pos, name)
-    }
-  }
-
-
-  var locationNames = await map.handlers.locationNames.init(map, {
-    getNorthWest: {
-      lat: 51.61577247781892,
-      lng: -24.50441987718352
-    },
-    getSouthEast: {
-      lat: 4.244208080077743,
-      lng: 31.7345937946915
-    }
-
-
-  }, './map/mapreader/foundImages_5120_empire_bw3.json')
-
-
-  locationNames.diagMode()
+  // locationNames.diagMode()
   // locationNames.placeMarkerAtTown("altdorf")
   // locationNames.placeMarkerAtTown("mittelweg")
   // locationNames.placeMarkerAtTown("talabheim")
