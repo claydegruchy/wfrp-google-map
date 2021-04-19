@@ -177,6 +177,7 @@ window.initMap = async function() {
   }
 
   map.handlers.memory = {
+
     save: (name, value) => localStorage.setItem(name, value),
     load: (name) => {
       var rawMemory = localStorage.getItem(name)
@@ -187,6 +188,8 @@ window.initMap = async function() {
         return undefined
       }
     },
+    import: (data) => {},
+    export: () => {},
   }
 
   map.handlers.settings = map.handlers.memory.load("settings")
@@ -206,21 +209,21 @@ window.initMap = async function() {
       //
       return this
     },
-    setView: function(position, zoom) {
-      console.info(name(), position, zoom);
-      if (!position || !zoom) {
-        console.warn("must supply both position and zoom", position, zoom);
+    setView: function(data) {
+      console.info(name());
+      if (!data || !data.position || !data.zoom) {
+        console.warn("must supply both data.position and data.zoom", data);
         return
       }
-      this.map.setCenter(position);
-      this.map.setZoom(Number(zoom));
+      this.map.setCenter(data.position);
+      this.map.setZoom(Number(data.zoom));
       this.updateView()
     },
 
     loadViewFromMemory: function() {
       console.info(name());
-      var view = [this.map.handlers.memory.load("center"), this.map.handlers.memory.load("zoom")]
-      this.setView(...view)
+      var view = this.map.handlers.memory.load("view");
+      this.setView(view)
       return view
 
     },
@@ -228,8 +231,13 @@ window.initMap = async function() {
       var zoom = this.map.getZoom()
       var position = this.map.getCenter().toJSON()
       // console.info(name(), position, zoom);
-      this.map.handlers.memory.save("center", JSON.stringify(position))
-      this.map.handlers.memory.save("zoom", zoom)
+      var view = {
+        zoom,
+        position
+      }
+      this.map.handlers.memory.save("view", JSON.stringify(view))
+      // this.map.handlers.memory.save("center", JSON.stringify(position))
+      // this.map.handlers.memory.save("zoom", zoom)
       // update histroy
       this.viewHistory.push({
         zoom,
@@ -353,7 +361,7 @@ window.initMap = async function() {
 
   var markers = map.handlers.markers.init(map)
   markers.loadMarkersFromMemory()
-  markers.markers.map(m => m.setDraggable(true))
+  // markers.markers.map(m => m.setDraggable(true))
   // markers.deleteAllMarkers()
   //
   // Array.from(new Array(10))
@@ -668,12 +676,62 @@ window.initMap = async function() {
 
 
 
+  class SettingHandler {
+    // this is a way of making the settings easier to set
+    // when innitalised, it returns a setter/getter that will run the given function
+    constructor(parent, values) {
+      this.action = values.action
+      this.inital = values.inital
+      this.ob = {
+        ...values,
+        // get the vvalue
+        get value() {
+          console.log("Getting");
+          return this.inital
+        },
+        // set the vvalue and also run the function
+        set value(val) {
+          if (values.action) values.action(val, parent)
+          this.inital = val
+          return val
+        }
+      }
+      this.ob.value = this.inital
+      return this.ob
+    }
+  }
+
+
+
+
+
   map.handlers.controls = {
     settings: {
-      markerEdit: true,
-      lineEdit: false,
-      autoSelect: true,
-      tags: ["manual", "temp"]
+      // each setting has an innital value and a function it runs when its edited
+      markerEdit: {
+        title: "Dragable markers",
+        inital: true,
+        type: "checkbox",
+        action: (value, parent) => parent.markers.markers.map(m => m.setDraggable(value))
+      },
+      lineEdit: {
+        title: "Editable lines",
+        inital: false,
+        type: "checkbox",
+        action: (value, parent) => parent.lines.lines.map(line => line.setEditable(value))
+      },
+      autoSelect: {
+        title: "Auto select new marker",
+        inital: true,
+        type: "checkbox",
+        action: (value, parent) => {}
+      },
+      tags: {
+        title: "Tags",
+        inital: ["manual"],
+        type: "dropdown",
+        action: (value, parent) => console.log("its happenung,tags", value, parent)
+      },
     },
     init: async function(map, markers, lines) {
 
@@ -682,6 +740,11 @@ window.initMap = async function() {
       this.controlDIV = document.querySelector("#controls")
       this.markers = markers
       this.lines = lines
+
+      // iterate over the settings and make them into settings handllers
+      for (var [key, value] of Object.entries(this.settings)) {
+        this.settings[key] = new SettingHandler(this, value)
+      }
 
 
       this.drawingManager = await new google.maps.drawing.DrawingManager({
@@ -721,12 +784,12 @@ window.initMap = async function() {
 
       google.maps.event.addListener(this.drawingManager, 'markercomplete', (marker) => {
         // make a marker
-        console.log(this.settings.tags);
+        console.log(this.settings.tags.value);
         var m = this.markers.createMarker({
           position: marker.position,
-          draggable: this.settings.markerEdit,
+          draggable: this.settings.markerEdit.value,
           data: {
-            tags: [...this.settings.tags]
+            tags: [...this.settings.tags.value]
           }
 
         });
@@ -735,7 +798,7 @@ window.initMap = async function() {
         // delete the one placed bby the controller
         marker.setMap(null)
 
-        if (!this.settings.autoSelect) return
+        if (!this.settings.autoSelect.value) return
         this.menus.hand.selectMarker(m)
 
       });
@@ -816,10 +879,14 @@ window.initMap = async function() {
           marker.infowindow.open(this.parent.map, marker)
         },
         drawControls: async function() {
-          console.log(parent.map.handlers);
           // if (!parent.map.handlers.defaults.enableHandControls) return
-          this.parent.controlDIV.querySelector(".content").innerHTML = this.basicControlTemplate(this.parent)
+          var content = this.parent.controlDIV.querySelector(".content")
 
+          content.innerHTML = this.basicControlTemplate(this.parent)
+          for (var [key, value] of Object.entries(this.parent.settings)) {
+            var inp = content.querySelector(`input[name="${key}"]`)
+            inp.onchange = (e) => this.parent.settings[e.target.name].value = e.target.checked
+          }
         },
         init: async function(parent) {
           this.parent = parent
@@ -1019,9 +1086,6 @@ window.initMap = async function() {
 
 
 
-
-
-
   var mapLocationDrawer = {
 
 
@@ -1156,47 +1220,6 @@ window.initMap = async function() {
   // locationNames.placeMarkerAtTown("russbach")
   // locationNames.placeMarkerAtTown("zundap")
   // locationNames.placeMarkerAtTown("kurst")
-
-
-
-
-
-  /*
-  ok perhaps i  can take the raw number (say x/lng) and find the bound extends on the  lng axis on the map
-  thisll give a nnumber thats the total width of the avalible area where a point can fall on the raw mmap
-  then i can find the % of how far over on the x axis the raw location is
-  then find the same person on the lng axis, which should give the same location
-  */
-
-
-
-
-  //
-  //
-  //
-  //
-  // fastMarker(removeOffset(altdorf.map), "removeOffset(altdorf.map)")
-  // fastMarker(removeOffset(mittelweg.map), "removeOffset(mittelweg.map)")
-  // fastMarker(removeOffset(talabheim.map), "removeOffset(talabheim.map)")
-  //
-  //
-  // fastMarker({lat:altdorf.raw.y/100, lng:altdorf.raw.x/100}, "altdorf.raw")
-  // fastMarker({lat:mittelweg.raw.y/100, lng:mittelweg.raw.x/100}, "mittelweg.raw")
-  // fastMarker({lat:talabheim.raw.y/100, lng:talabheim.raw.x/100}, "talabheim.raw")
-
-  /*
-  move map altdorf origin to raw top left
-  minus raw locations so that their origin is bottom right
-  make origin of raw and map the same
-  */
-
-
-  //
-  //
-  //
-  //
-  //
-
 
 
 

@@ -1,18 +1,8 @@
 <div class="padding">
-  <p>
-    <label for="markerEdit">Enable marker editing</label>
-    <input class="input" type="checkbox" name="markerEdit" {{#if settings.markerEdit}}checked{{/if}}>
-  </p>
-  <p>
-    <label for="lineEdit">Enable line editing</label>
-    <input class="input" type="checkbox" name="lineEdit" {{#if settings.lineEdit}}checked{{/if}}>
-  </p>
-  <p>
-    <label for="markerClear">Clear all markers</label>
-    <input class="input" type="button" name="markerClear">
-  </p>
-  <p>
-    <label for="lineClear">Clear all lines</label>
-    <input class="input" type="button" name="lineClear">
-  </p>
+  {{#each settings}}
+    <p>
+        <label for="{{@key}}">{{this.title}}</label>
+        <input class="input" type="{{this.type}}" name="{{@key}}" {{#if this.value}}checked{{/if}}> </input>
+    </p>
+  {{/each}}
 </div>
