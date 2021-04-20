@@ -9,7 +9,7 @@ function downloadObjectAsJson(exportObj, exportName) {
 }
 
 
-async function runImport() {
+async function uploadFileScreen() {
   const {
     value: file
   } = await Swal.fire({
@@ -20,19 +20,19 @@ async function runImport() {
       'aria-label': 'Upload your profile picture'
     }
   })
-
-  if (file) {
+  return await  new Promise((resolve, reject) => {
+    if (!file) reject("bruh, load something")
     const reader = new FileReader()
     reader.onload = (e) => {
       Swal.fire({
         title: 'Data imported!',
-        text: 'The page will now reload to import data'
+        text: 'You should probably reload the page to make sure nothing weird happens'
       })
+      resolve(e.target.result)
     }
     reader.readAsText(file)
-    //
+  })
 
-  }
 }
 
 

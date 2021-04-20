@@ -186,8 +186,11 @@ window.initMap = async function() {
     }
   }
 
-  map.handlers.memory = {
-
+  var memoryhandler = {
+    init: function(map) {
+      this.map = map
+      return this
+    },
     save: (name, value) => localStorage.setItem(name, value),
     load: (name) => {
       var rawMemory = localStorage.getItem(name)
@@ -198,16 +201,20 @@ window.initMap = async function() {
         return undefined
       }
     },
-    import: function(memoryArray = []) {
-      console.log(name());
+    import: function(memoryArray) {
+      memoryArray = JSON.parse(memoryArray)
+      console.log("import", memoryArray);
       for (var memory of memoryArray) {
-        if (!memory.data) continue;
+        if (!memory.memory) continue;
         console.log("importing", memory.name);
-        this.save(memory.name, JSON.stringify(memory.data))
+        this.save(memory.name, JSON.stringify(memory.memory))
+
+        if (this.map.handlers[memory.name] && this.map.handlers[memory.name].loadFromMemory) this.map.handlers[memory.name].loadFromMemory()
+
       }
     },
     export: function(map = map) {
-      console.log(name());
+      console.log("export");
       var exp = []
       for (var [name, handlerValue] of Object.entries(map.handlers)) {
         var memory = this.load(name)
@@ -221,6 +228,7 @@ window.initMap = async function() {
     },
   }
 
+  map.handlers.memory = memoryhandler.init(map)
 
 
   map.handlers.settings = map.handlers.memory.load("settings")
@@ -251,7 +259,7 @@ window.initMap = async function() {
       this.updateView()
     },
 
-    loadViewFromMemory: function() {
+    loadFromMemory: function() {
       console.info(name());
       var view = this.map.handlers.memory.load("view");
       this.setView(view)
@@ -281,7 +289,7 @@ window.initMap = async function() {
   }
 
   var view = map.handlers.view.init(map)
-  view.loadViewFromMemory()
+  view.loadFromMemory()
 
 
 
@@ -317,7 +325,7 @@ window.initMap = async function() {
       return this
     },
 
-    loadMarkersFromMemory: function() {
+    loadFromMemory: function() {
       var mem = this.map.handlers.memory.load("markers")
       console.log(name(), mem);
       if (mem && mem.length > 0) mem
@@ -391,7 +399,7 @@ window.initMap = async function() {
 
 
   var markers = map.handlers.markers.init(map)
-  markers.loadMarkersFromMemory()
+  markers.loadFromMemory()
   // markers.markers.map(m => m.setDraggable(true))
   // markers.deleteAllMarkers()
   //
@@ -426,7 +434,7 @@ window.initMap = async function() {
       this.map.handlers.memory.save("lines", JSON.stringify(mem))
     },
 
-    loadLinesFromMemory: function() {
+    loadFromMemory: function() {
       var mem = this.map.handlers.memory.load("lines")
       console.info(name(), mem);
       if (mem && mem.length > 0) mem
@@ -506,7 +514,7 @@ window.initMap = async function() {
 
 
   var lines = map.handlers.lines.init(map)
-  lines.loadLinesFromMemory()
+  lines.loadFromMemory()
   // lines.deleteAllLines()
 
 
@@ -789,10 +797,12 @@ window.initMap = async function() {
         title: "Import map data",
         inital: false,
         type: "button",
-        action: (value, parent) => {
+        action: async (value, parent) => {
           if (!value) return
-          
-          new parent.Swal()
+
+          // new parent.Swal()
+          uploadFileScreen()
+            .then(data => parent.map.handlers.memory.import(data))
         }
       },
       export: {
@@ -801,9 +811,8 @@ window.initMap = async function() {
         type: "button",
         action: (value, parent) => {
           if (!value) return
-          downloadObjectAsJson({
-            "test": true
-          }, "testfile")
+
+          downloadObjectAsJson(parent.map.handlers.memory.export(map), "wfrp-map-export")
         }
       },
     },
