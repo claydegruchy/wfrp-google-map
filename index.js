@@ -12,6 +12,16 @@ window.initMap = async function() {
     return arguments.callee.caller.name
   }
 
+
+  function exportData(data, name = 'data') {
+
+
+
+
+    downloadObjectAsJson(data, "WFRP-map-" + name)
+  }
+
+
   function debounce(func, timeout = 300) {
     let timer;
     return (...args) => {
@@ -187,9 +197,30 @@ window.initMap = async function() {
         return undefined
       }
     },
-    import: (data) => {},
-    export: () => {},
+    import: function(memoryArray = []) {
+      console.log(name());
+      for (var memory of memoryArray) {
+        if (!memory.data) continue;
+        console.log("importing", memory.name);
+        this.save(memory.name, JSON.stringify(memory.data))
+      }
+    },
+    export: function(map = map) {
+      console.log(name());
+      var exp = []
+      for (var [name, handlerValue] of Object.entries(map.handlers)) {
+        var memory = this.load(name)
+        if (!memory) continue;
+        exp.push({
+          name,
+          memory
+        })
+      }
+      return exp
+    },
   }
+
+
 
   map.handlers.settings = map.handlers.memory.load("settings")
 
@@ -675,6 +706,26 @@ window.initMap = async function() {
 
 
 
+  // map.handlers.locationNames = {
+  //   init: async function(map, data) {
+  //
+  //     console.info("locationNames", name());
+  //     this.map = map
+  //     this.mapFile = await fetch(data.url)
+  //       .then(r => r.json())
+  //     this.mapFileCorners = data.mapFileCorners
+  //
+  //     this.indexLocation = this.mapFile[0]
+  //     this.locations = this.mapFile
+  //       .filter((a, i) => i != 0)
+  //       // clean the junk  out
+  //       .filter(a => a.description.length > 2)
+  //     return this
+  //   },
+  // }
+
+
+
   class SettingHandler {
     // this is a way of making the settings easier to set
     // when innitalised, it returns a setter/getter that will run the given function
@@ -685,7 +736,6 @@ window.initMap = async function() {
         ...values,
         // get the vvalue
         get value() {
-          console.log("Getting");
           return this.inital
         },
         // set the vvalue and also run the function
@@ -702,6 +752,9 @@ window.initMap = async function() {
 
 
 
+
+  // var x = JSON.stringify(map.handlers.memory.export(map))
+  // console.log(x);
 
 
   map.handlers.controls = {
@@ -731,8 +784,30 @@ window.initMap = async function() {
         type: "dropdown",
         action: (value, parent) => console.log("its happenung,tags", value, parent)
       },
+      import: {
+        title: "Import map data",
+        inital: false,
+        type: "button",
+        action: (value, parent) => {
+          if (!value) return
+          
+          new parent.Swal()
+        }
+      },
+      export: {
+        title: "Export map data",
+        inital: false,
+        type: "button",
+        action: (value, parent) => {
+          if (!value) return
+          downloadObjectAsJson({
+            "test": true
+          }, "testfile")
+        }
+      },
     },
     init: async function(map, markers, lines) {
+      this.Swal = require('sweetalert2')
 
       console.info("controls", name());
       this.map = map
@@ -881,9 +956,14 @@ window.initMap = async function() {
           // if (!parent.map.handlers.defaults.enableHandControls) return
           var content = this.parent.controlDIV.querySelector(".content")
 
+
+
+
           content.innerHTML = this.basicControlTemplate(this.parent)
           for (var [key, value] of Object.entries(this.parent.settings)) {
             var inp = content.querySelector(`input[name="${key}"]`)
+
+            if (value.type == "button") inp.onclick = (e) => this.parent.settings[e.target.name].value = true
             inp.onchange = (e) => this.parent.settings[e.target.name].value = e.target.checked
           }
         },
@@ -1012,15 +1092,7 @@ window.initMap = async function() {
             })),
             placeholder: 'Placeholder Text Here',
             closeOnSelect: true,
-            // showOptionTooltips: true,
-            // afterClose: function(t) {
-            //     this.open();
-            //     console.log('beforeClose' )
-            // },
-            // beforeClose: function(t) {
-            //     this.open();
-            //     console.log('beforeClose' )
-            // },
+
             closeOnSelect: true,
             onChange: async info => {
 
@@ -1452,23 +1524,6 @@ window.initMap = async function() {
 
 
 
-  function exportData(data, name = 'data') {
-
-
-    function downloadObjectAsJson(exportObj, exportName) {
-      var dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportObj, null, 2));
-      var downloadAnchorNode = document.createElement('a');
-      downloadAnchorNode.setAttribute("href", dataStr);
-      downloadAnchorNode.setAttribute("download", exportName + ".json");
-      document.body.appendChild(downloadAnchorNode); // required for firefox
-      downloadAnchorNode.click();
-      downloadAnchorNode.remove();
-    }
-
-    downloadObjectAsJson(data, "WFRP-map-" + name)
-  }
-
-
   function importData(data) {
     for (var [key, value] of Object.entries(data)) {
       log("old", "imported", key);
@@ -1796,33 +1851,7 @@ window.initMap = async function() {
 
 
 
-  async function runImport() {
-    const {
-      value: file
-    } = await Swal.fire({
-      title: 'Select image',
-      input: 'file',
-      inputAttributes: {
-        'accept': 'application/json',
-        'aria-label': 'Upload your profile picture'
-      }
-    })
 
-    if (file) {
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        importData(JSON.parse(e.target.result))
-        Swal.fire({
-            title: 'Data imported!',
-            text: 'The page will now reload to import data'
-          })
-          .then(() => window.location.reload(false))
-      }
-      reader.readAsText(file)
-      //
-
-    }
-  }
 
   // overlay.activate()
 
