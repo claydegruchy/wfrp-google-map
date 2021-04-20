@@ -966,8 +966,6 @@ window.initMap = async function() {
           var content = this.parent.controlDIV.querySelector(".content")
 
 
-
-
           content.innerHTML = this.basicControlTemplate(this.parent)
           for (var [key, value] of Object.entries(this.parent.settings)) {
             var inp = content.querySelector(`input[name="${key}"]`)
@@ -1279,8 +1277,43 @@ window.initMap = async function() {
 
 
 
+  var smartImportHandler = {
+    init: async function(map, locationNames, urlParams) {
+      this.locationNames = locationNames
+      this.urlParams = urlParams
+      this.map = map
 
+      for (let [n, obj] of Object.entries(this.params)) {
+        console.log("checking", n);
+        if (this.urlParams[n]) await obj.init(this, this.urlParams[n])
 
+      }
+
+      return this
+    },
+    params: {
+      poiLoadAddress: {
+        init: async function(parent, initalCommand) {
+          console.log("starting", "poiLoadAddress");
+          this.initalCommand = initalCommand
+          this.parent = parent
+          return this
+        }
+      },
+      readStory: {
+        init: async function(parent, initalCommand) {
+          console.log("starting", "readStory");
+          this.initalCommand = initalCommand
+          this.parent = parent
+          return this
+
+        }
+      }
+    }
+
+  }
+
+  smartImportHandler.init(map, locationNames, params)
 
 
   // locationNames.diagMode()
