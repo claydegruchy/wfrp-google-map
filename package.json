@@ -11,6 +11,7 @@
   "license": "ISC",
   "dependencies": {
     "@flatten-js/core": "^1.2.22",
+    "@octokit/rest": "^18.5.3",
     "choices.js": "^9.0.1",
     "handlebars": "^4.7.7",
     "sweetalert2": "^10.16.5"

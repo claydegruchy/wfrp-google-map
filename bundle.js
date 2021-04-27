@@ -3,7 +3,42 @@ const Handlebars = require('handlebars');
 
 // var potionTemplate = Handlebars.compile(potionTemplate);
 
-
+var fubdnvrgkbiihiegvckjdfvkkbucjgjk = [{
+  "direction": null,
+  "distance": null,
+  "town": "guthugel",
+  "story": "The carriage rattles over yet another bump in the dirt road, sending a jolt of pain through your already aching back. You could swear you’ve been on the road for years, though in reality, it’s been closer to a month. The roads, forests, and towns you’ve passed through, ferrying passengers on their journeys, have all started to blur together and you’re beginning to consider packing it all in and setting up house in whatever the next town is.\n\n“Roads were better in my day.” Mutters a voice from one of the carriage seats. “Not so many of ‘em, of course. This ‘ere was all fields.” Looking around you, you’d argue this ‘ere was still all fields.\n\nThe voice, which has been an endless feature for the past few hours, belongs to Cooper Fitzpatrick, a retired lumberjack who, along with his pet pig, has hired you to transport him to Mittelweg. Glancing up at the sun, you try to calculate how many more hours you’ll need to listen to him and the odds of you dumping him in a ditch on the way.\n\nJust as you’re fantasizing about booting the old man out of the moving carriage, salvation appears. Ahead on the road is Guthugel, a small but moderately prosperous town. Though the town itself is home to only around 900 people, it more than triples in size several times a year thanks to its highly popular seasonal markets.\n\nThe horses are in need of food and rest, and you and your friends in dire need of some recreation. Given that you’ve made good progress and are only a short distance from your final destination, you decide to spend a couple of hours enjoying the market. You part ways with your passenger and his porcine pal, agreeing to meet back at the cart later.\n\nAfter days of sleepy villages and mostly empty roads, the market is a breath of fresh air. The atmosphere is alive with excitement and the air rich with the shouts of salespeople and traders of all kinds. Tents stretch off in every direction and you quickly find yourself drawn into the throng of the crowd and to the many and varied wares on display.\n\nMost of the goods are well outside your meagre savings but, with a little haggling and lot of browsing, you eventually come away with some new gear. Among other things, Karl picks up a second dagger, Meik a waterproof cloak and a slingshot, and Mandred kits himself out with some armour and a spear.\n\nJust as you’re thinking of heading off, you’re drawn to a spectacle: an alchemist hawking his amazing and powerful strength potions. Karl immediately pegs him as a charlatan but the naive Meik can’t help himself and soon finds himself on stage giving a demonstration. After taking a sip of the potion, he is miraculously able to lift the showman’s cart. With the potion’s merits proven, the crowd rush to buy, and the party pick up a few for themselves.\n\nThe market starts to wind down and you and your companions are back on the road. The evening draws in and your destination draws near. The birdsong and the rocking of the cart lulls you into daydreams of warm beds and full stomachs.\n\n"
+}, {
+  "direction": ["south"],
+  "distance": "1",
+  "town": "mittelweg",
+  "story": "You are startled from your reverie by a piercing scream from off in the woods. As the carriage comes to a stop, several more screams tear through the night. Fearing that someone is in danger, you leave the old man and the pig to guard the carriage while you head off to investigate.\n\nThe darkness in the forest is far deeper than it was on the road and you cautiously pick your way towards the sounds. After a few tense minutes, you come upon a clearing where a horrifying scene is taking place. A young couple and their infant child lie on the ground being viciously attacked by 3 beastmen. Seeing that at least one of them appears to still be alive, the party goes to their aid.\n\nThe beastmen—a large goat-headed Gor and two smaller unGors—seem surprised by your presence, rounding on you as you attack.\nMandred blasts at the Gor with his pistol, seriously injuring it. He himself is hit by a poorly thrown spear, vindicating his armour purchase Guthugel. Before Mandred can recover, Karl charges into the fray.\nOn the other side of the melee, Meik finds himself in a wrestling match with a spear-wielding unGor, grappling it to the ground. After trading blows and cuts, he wraps an arm around its neck and holds on for dear life, choking it.\nIn a frenzy, the Gor swings its mighty axe at Karl. Seeing that the end is almost upon him, Karl musters up all his strength and courage, kicking the Gor’s legs from under it. In the confusion, they both tumble to the ground.\nDespite its wounds, the Gor strikes a massive blow to Karl’s head, before being finished off by a well-aimed stab from Mandred. Seeing their ally defeated, the unGors flee into the trees.\n\nThe party reviews the carnage before them. The man and child are torn to pieces and, by now, the woman has also died. Investigating more closely, Mandred prizes a delicate comb from the Gor’s fist which you decide to take with you. Finally, Mandred cuts off the Gor’s head and Karl (with a little help) takes its axe as proof of your encounter. Wounded and exhausted, you make your way back to the carriage where you discover your brave guard, and his pig, comfortably asleep.\n\n"
+}, {
+  "direction": null,
+  "distance": null,
+  "town": "mittelweg",
+  "story": "After a short and nervous drive, you arrive in Mittelweg. The hour is late and the village is mostly asleep. As you part ways with Cooper, he advises that you’ll find places to sleep in the church or the inn. Needing somewhere to stable the horses, you start with the inn but find the staff there surly and unhelpful and the fees for the night exorbitant. They suggest that if you don’t like what they’re offering you might want to check out the house of Vixea, the local whore.\n\nYou try the church but find no one home and so, irritated and out of options, you return to the inn. Mandred and Meik settle for a cold wash, a meagre meal, and the one available bed while Karl chooses to visit Vixea. There he finds a warm bath and warm food and while he also has to share a bed, he doesn’t mind as much.\n\n"
+}, {
+  "direction": null,
+  "distance": null,
+  "town": "carroburg",
+  "story": "You all awaken in an Inn, hungover as all hell. You have no memory of the preceeding day. You go down stairs, take food from the kind but stern Esme (who seems to be the halfling tavern keep of the Pointed Anchor) and, after a rocky attempt at plicating an annoyed ogre, begin to recollect the previous days events.\n\nYou're in the town of Carroburg, you arrived yesterday. You all met during the afternoon, when a fight broke out in an allyway between two men (possibily a robbery), though you dont remember what they were fighting over. You all fought a fistfight with them.\n\n- Mandred was given a shinging eye by one assailant, and a sore arm by another.\n- One man was stabbed in the back by Karl\n- Another completely demolished by Meiks practiced fistfighting ability.\n- The \"leader\" escaped into an alley.\n\nThe person being robbed was extremely thankful and gave you 5 silver each for helping them, telling you to have a good night with it.\n\nYou all go to a bar and get to know each other.\n\nYou made the most of the money given as well, heading to a variety of drinking places in town and chatting to various folks while pissed. Seems a lot was happening in town, from trader disputes, to gang crimes, and nobel family differences. To name but a few of your escapades, you meet:\n- A swaying drunk with very little to say and a wide jaw\n- Meik befriends a pair of old sailors, who treat you to repeditive gossip\n- A pair of \"card sharps\" are blunted by Karl's gambling ability\n- Mandred is offered a job by the blackpikes\n\n\n"
+}, {
+  "direction": ["south"],
+  "distance": null,
+  "town": "carroburg",
+  "story": "You also try to visit some very closed seedy bars and are denied and end up going to a rich mans bar (with a little of Karls way with words explaining away your shabby atire to the armed bouncers outside, with a little help from Meik). Once inside, young man puts you in touch with one Jarome von Valtbliz, who has some family trouble that he'd like disposible assistance with, and writes you a note of when and where to meet. Karl attempts to get some information out of some nearby folks (very successfully) and makes a friend or two without event cheating anyone, while Meik and Mandred get to know each other. Helpfully, the young man who introduced you also covers your drinks for the evening, preventing you from finding out if the bouncers outside know how to use their swords.\n\nYour memory then gets extremely hazy, and your exact actions are difficult to say.\n\nThe next day, after dealing with a hangover and a \"cheated\" Ogre, you head out into the town. On the way, Karl enters the The Drowned Rat in Docksward, dispite not having been invited and having stabbed one of the Pikes only the day before. Runs out being chased by several angry, tattooed thugs. Loses favorite deck of cards, but luckily not an arm.\n\nEventually you make your way to Jaromes house to find a very unpleasent man (with a taste for young house maids), though perhaps he just likes people to arrive on time to their appointments (you are at least an hour late). Arrogant and agressive and caked with makeup, he tells the aprty that he is jealious of his brother's (Lord Oscar) success, and wishes for his place at the right hand of Wulfram von Todbringer. Hes not interested in details, and just wants it done.\n\nCalling on Karl's connection from the past, you meets up with Ecchart Fuchs (borther of Karls household maid, Emilia Fuchs). He tells you some interesting info of the von Valtbliz family, including the location of the von Valtbliz Manor.\n\n"
+}, {
+  "direction": ["north"],
+  "distance": null,
+  "town": "carroburg",
+  "story": "After getting to the von Valtbliz Manor, you arrive and are obviously thought to be workers or people needing jobs, and are dismissed from the front door quicky to the servents entrance. Seems you must attempt to enter the household. With some good speaking and better rolls (Meiks knowledge of fish being of great use, and buying time for Karls charm to kick in), you manage to score jobs in the von Valtbliz Manor in Darkfair.\n\nThe head of the house (the Butler) is a harried man, who says the extra assistance for the maids and cooks would be useful. Lord Oscar seems like an OK boss too, you meet him in his sitting room after dressing up ( and though Mandred \"accidentally\" shaved off his eyebrows, Lord Oscar didn't seem to mind) he approves your hiring. Karl and Mandred quickly prove their worth by materialsing 3 oaktrees worth of wood out of the thin air located around the neighbors wood pile, and Meik manages to win the cook over by showing a great keenness for fish and its acquisition. Most of the household enjoys the company of you all, dispite the missing hair above the eye on some.\n\nIt the comes out that Lord Oscar has a strange habit of running around town dressed as a peasent, as you don't need disguises to look poor, Meik lends his shoes to the lord to assist in his disguise (and bags some new shoes in the proccess). You manage find and follow the tracks of Meiks old shoes in the snow to a some sort of drinking complex (The Three Pubs.) in town, 3 differnt \"fun\" houses and split up to search.\n1. A heavy drinking place - Everyone goes into this bar, but it quickly shows to be empty of the lord.\n2. A brothel - Taken by Mandred, finds nothing but large tits and a decent deal on weirdroot.\n3. An opium den - Both Karl and Meik take this and while enjoying the fumes, find the square jaw of Lord Oscar von Valtbliz, dressed some basic peasent garb.\n\nWhile shocked to see them, Lord Oscar von Valtbliz seems to think his disguise is working and take the opertunity to ask about himself of you. Eventually Mandred joins outside and everyone heads off to a night of heavy drinking in various bars. It seems that Lord Oscar von Valtbliz is actually a pretty nice guy and you feel that maybe shaming him so his psychotic brother can control the city might be a bad idea.\n\nIts decided that Lord Oscar von Valtbliz needs to know of the issue, but believing him to be a soft touch, Karl attempt to convince the Butler to take a letter to theGraf (Wulfram von Todbringer). It seems the graf might not be the most understanding chracter, but instead you decide you may simply be able to convince Lord Oscar.\n\nThough the world was against it, fate was on the side of you (5 fate total infact) and the Lord Oscar is convined, a strong case made by Karl's undeniable charm, assisted by Meik and Mandreds helpful notes. Handing over his diamond gold hammer of sigmar necklace as proof, Lord Oscar sends you to see Jarome.\n\nJarome was not ready for this appointment but his newly hired housemaid lets you in to his darkened room. Jarome is in a terrible state, ranting and raving, and writing without ink. Its clear that his is a man deranged, and you feel better than ever about not giving keys of the city. Given his state, you insist on payment immidately, and he awards you 2 gold each. You tell him that his brother needs to be outed in public and that he should meet them at Pub 2 of the The Three Pubs tomorrow.\n\nWhile making your way back to the Manor, the village is rocked by a massive explosion. Seems a ship in the river has been attacked, but by who or what is a mystery. People run to the dock to help, you continue to the manor as you have improtant news for Lord Oscar.\n\n"
+}, {
+  "direction": ["east"],
+  "distance": null,
+  "town": "carroburg",
+  "story": "The next evening, on arrival, Lord Oscar is shocked at his brothers appearance, having not seen him for 2 years dispite living in the same city. He asks the party to get the ball rolling. Jarome erupts, throwing a table over the room, implaing one of Lord Oscars guards. It seems his state of mind is as twisted as his body, with scales and claws under his makeup.\n\nWith a miraculous deflection, Karl manages to avoid being skewered by the 12cm long claw and Meiks stabs bounce off the Jarome-things scaled skin, Mandred puts his solid skills as a rough and tumble coachman to use, with a powerful handgun shot though the beasts twin shoulder, followed by a dagger though the eye and into the brain of the noble-turned-creature. Meik makes sure the beast is dead with a cut from shoulder to liver.\n\nLord Oscar is struck by the proceedings, and in a state of shock. He rewards you with a 1 gold bond to the Nuln Armory, a business concern he is involved with in Nuln. Karl smartly convinces the socked nobel that he already handed over the necklace to the Jarome, which he sadly accepts. In time, Jaromes lodging in the Docksward will be searched, hopefully it will be found there.\n\nIt also seems that the gangs were responsabile for the ship explosion, and that the detonated ship won't have anything to do with the Hooks (the ship is merely called The Hook), and is carrying linen for bandages and other medical supplies for the fight in Hochland against the beastmen. This does not bode well for the Blackpikes.\n\nYou shoot around thoughts about what you'll do now. Mandred has a cart that needs returning, perhaps you could all go together?\n\n"
+}]
 
 
 
@@ -15,11 +50,13 @@ window.initMap = async function() {
 
 
   function exportData(data, name = 'data') {
-
-
-
-
     downloadObjectAsJson(data, "WFRP-map-" + name)
+  }
+
+
+
+  function titleCase(str) {
+    return str.toLowerCase().replace(/\b(\w)/g, s => s.toUpperCase());
   }
 
 
@@ -1279,42 +1316,185 @@ window.initMap = async function() {
 
 
   var smartImportHandler = {
-    init: async function(map, locationNames, urlParams) {
+    init: async function(map, locationNames, link, options = {}) {
+
+      this.settings = {
+        distanceMultiplier: 0.3,
+        defaultDistance: 1,
+        directions: [
+          ["north", {
+            lng: 0,
+            lat: 1
+          }],
+          ["south", {
+            lng: 0,
+            lat: -1
+          }],
+          ["east", {
+            lng: 1,
+            lat: 0
+          }],
+          ["west", {
+            lng: -1,
+            lat: 0
+          }],
+        ]
+      }
+
       this.locationNames = locationNames
-      this.urlParams = urlParams
+      this.link = link
       this.map = map
 
-      for (let [n, obj] of Object.entries(this.params)) {
-        console.log("checking", n);
-        if (this.urlParams[n]) await obj.init(this, this.urlParams[n])
+      Object.entries(options).map(option => this[option[0]] = option[1])
 
+
+
+      this.story = await this.getStory()
+      var extractedLocations = await this.extractLocations()
+      var POIs = await this.generatePOIs(extractedLocations)
+      this.placeMarkers(POIs)
+
+      if (this.enableLine) {
+        this.map.handlers.lines.createLine({
+          path: POIs.map(p => p.pos),
+          ...this.map.handlers.defaults.lineStyles,
+          strokeColor:"orange",
+        })
       }
 
       return this
     },
-    params: {
-      poiLoadAddress: {
-        init: async function(parent, initalCommand) {
-          console.log("starting", "poiLoadAddress");
-          this.initalCommand = initalCommand
-          this.parent = parent
-          return this
+    placeMarkers: async function(pois) {
+      console.info(name(), pois);
+      var count = 0
+
+      for (var location of pois) {
+        count += 1
+
+        await this.map.handlers.markers.createMarker({
+          position: location.pos,
+          data: {
+            title: `${location.direction && location.direction.join("")||""} ${titleCase(location.town)}: ${count}`,
+            description: location.story,
+            tags: ["temp"],
+          }
+        })
+      }
+      console.log("markers placed");
+    },
+    getStory: async function() {
+      var repo = await fetch(`https://api.github.com/repos/${this.link}/git/trees/master`)
+        .then(r => r.json())
+
+console.debug(repo);
+
+      var urls = repo.tree.map(r => r.url)
+      
+      var files = urls.map(u => fetch(u, {
+        headers: {
+          "Accept": "application/vnd.github.v3.raw"
         }
-      },
-      readStory: {
-        init: async function(parent, initalCommand) {
-          console.log("starting", "readStory");
-          this.initalCommand = initalCommand
-          this.parent = parent
-          return this
+      }).then(r => r.text())).reverse()
+
+      return await Promise.all(files)
+    },
+    generatePOIs: async function(locations) {
+
+
+      var processDirection = (location) => {
+        for (var dir of location.direction) {
+          dir = this.settings.directions.find(d => d[0] == dir)
+          location.pos.lng += dir[1].lng * location.distance * this.settings.distanceMultiplier
+          location.pos.lat += dir[1].lat * location.distance * this.settings.distanceMultiplier
 
         }
+        return location.pos
+
       }
-    }
+
+      var points = []
+      for (var location of locations) {
+        // get the location of the town
+        location.pos = locationNames.findLocationByName(location.town)
+        // if it has no distance, set it as the default
+        if (!location.distance) location.distance = this.settings.defaultDistance
+        // if it has a direction, add each direction to the location, clamping to distance
+        if (location.direction) location.pos = processDirection(location)
+        // return POI map
+
+
+
+
+        points.push(location)
+
+      }
+      return points
+
+    },
+    extractLocations: async function() {
+
+      // join the whole story together
+      var story = this.story.reverse().join("\n")
+
+      var chapterRegex = /\# Location: (.*?)(?=#)/gis;
+      // match each chapter based on the above regex
+      var chapter = [...story.matchAll(chapterRegex)]
+
+      var locationRegex = /Location:.*?\n/gi
+
+      var extractedLocations = []
+
+      for (var storySection of chapter) {
+        // just in case 1 location fails, just skip it and keep going
+        try {
+
+          // get the location from the chapter
+          var location = storySection[0].match(locationRegex)[0]
+          // make the story by taking the chapter and removing the location
+          var story = storySection[0].replace("# " + location, "")
+
+          location = location.toLowerCase()
+          // get the direction if any
+          var dirRegex = /\b(?:north|south)(?:\h*(?:east|west))?\b|\b(?:east|west)\b/gi
+          var direction = location.match(dirRegex)
+          // get the distance if any
+          var disRegex = /\b(\d+).?(\d*)\s*(?=(mile|miles|km|kms))\b/gi
+          var distance = location.match(disRegex) && location.match(disRegex)[0].trim()
+          // get the name of the town
+          // needs to be trimmed
+          // also needs two different kind in case its just a town name with nothing else
+          var town = direction && distance && location.match(/\b(?<=(of))\s+([a-zA-Z]*)/gi)[0].trim() || location.replace(direction, "").replace(distance, "").replace("location:", "").trim()
+
+          // put it together
+          var parsedLocation = {
+            direction,
+            distance,
+            town,
+            story
+          }
+          // and push it
+          extractedLocations.push(parsedLocation)
+
+        } catch (e) {
+          console.error(location, e);
+          continue
+        }
+
+
+      }
+      return extractedLocations
+
+    },
+
+
+
+
 
   }
 
-  smartImportHandler.init(map, locationNames, params)
+  smartImportHandler.init(map, locationNames, params.link, {
+    enableLine: true
+  })
 
 
   // locationNames.diagMode()
