@@ -1,0 +1,8 @@
+<div class="padding">
+  {{#each settings}}
+    <p>
+        <label for="{{@key}}">{{this.title}}</label>
+        <input class="input" type="{{this.type}}" name="{{@key}}" {{#if this.value}}checked{{/if}}> </input>
+    </p>
+  {{/each}}
+</div>
